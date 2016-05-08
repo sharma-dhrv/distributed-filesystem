@@ -115,6 +115,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public String last()
     {
+        // Bottom half starts here
         throw new UnsupportedOperationException("not implemented");
     }
 
