@@ -130,6 +130,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public boolean isSubpath(Path other)
     {
+
         throw new UnsupportedOperationException("not implemented");
     }
 
