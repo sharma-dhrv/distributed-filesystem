@@ -21,24 +21,56 @@ import java.util.*;
  */
 public class Path implements Iterable<String>, Comparable<Path>, Serializable
 {
+
+    // Create a LinkedList<String> to store the components of a path
+    public LinkedList<String> pathComponents;
+
+    // Create a Path Separator variable
+    private String pathSeparator = "/";
+
     /** Creates a new path which represents the root directory. */
     public Path()
     {
-        throw new UnsupportedOperationException("not implemented");
+        this.pathComponents = new LinkedList<String>();
     }
 
     /** Creates a new path by appending the given component to an existing path.
 
         @param path The existing path.
         @param component The new component.
-        @throws IllegalArgumentException If <code>component</code> includes the
+        @throws IllegalArgumentException("
+        If <code>component</code> includes the
                                          separator, a colon, or
                                          <code>component</code> is the empty
                                          string.
     */
     public Path(Path path, String component)
     {
-        throw new UnsupportedOperationException("not implemented");
+        // Handle Illegal Arguments
+        if (component == null) {
+          throw new IllegalArgumentException("Component is null");
+        }
+
+        if (component.length() == 0) {
+          throw new IllegalArgumentException("Component is empty");
+        }
+
+        if (component.indexOf(pathSeparator) != -1) {
+          throw new IllegalArgumentException("Component includes separator /");
+        }
+
+        if (path == null) {
+          throw new IllegalArgumentException("The exting Path is null");
+        }
+
+        // Create the LinkedList
+        this.pathComponents = new LinkedList<String>();
+
+        // Add existing path to the list
+        this.pathComponents.addAll((Collection<String>)path.pathComponents);
+
+        // Add the current component to the list
+        this.pathComponents.add(component);
     }
 
     /** Creates a new path from a path string.
@@ -55,7 +87,23 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public Path(String path)
     {
-        throw new UnsupportedOperationException("not implemented");
+        // Handle Illegal Arguments
+        if (path == null) {
+          throw new IllegalArgumentException("The exting Path is null");
+        }
+
+        if (!path.startsWith(pathSeparator)) {
+          throw new IllegalArgumentException("The existing path doesn't start with /");
+        }
+
+        // Create the LinkedList
+        this.pathComponents = new LinkedList<String>();
+
+        // Toekinze the path and add to the LinkedList
+        StringTokenizer st = new StringTokenizer(path, pathSeparator);
+        while (st.hasMoreTokens()) {
+            this.pathComponents.add(st.nextToken());
+        }
     }
 
     /** Returns an iterator over the components of the path.
@@ -69,7 +117,30 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public Iterator<String> iterator()
     {
-        throw new UnsupportedOperationException("not implemented");
+        class PathIterator implements Iterator<String> {
+          Iterator<String> it;
+
+          public PathIterator() {
+            it = pathComponents.iterator();
+          }
+
+          @Override
+          public boolean hasNext() {
+            return it.hasNext();
+          }
+
+          @Override
+          public String next() {
+            return it.next();
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException("Remove operation is not supported.");
+          }
+        }
+
+        return new PathIterator();
     }
 
     /** Lists the paths of all files in a directory tree on the local
