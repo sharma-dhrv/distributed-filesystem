@@ -33,7 +33,12 @@ import storage.*;
  */
 public class NamingServer implements Service, Registration
 {
+    TreeNode filesystem = new TreeNode();
     private HashMap<String, StorageInfo> availableStorage;
+    private Skeleton<Registration> registrationSkeleton;
+    private Skeleton<Service> serviceSkeleton;
+    private boolean wasStartAttempted = false;
+
     /** Creates the naming server object.
 
         <p>
@@ -57,7 +62,20 @@ public class NamingServer implements Service, Registration
      */
     public synchronized void start() throws RMIException
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (wasStartAttempted){
+            throw new RMIException("Attempt to restart failed naming server");
+        }
+        try{
+            InetSocketAddress regAddress = new InetSocketAddress(NamingStubs.REGISTRATION_PORT);
+            registrationSkeleton = new Skeleton<>(Registration.class, new RegistrationImpl(), regAddress);
+            registrationSkeleton.start();
+
+            InetSocketAddress serviceAddress = new InetSocketAddress(NamingStubs.SERVICE_PORT);
+            serviceSkeleton = new Skeleton<>(Service.class, new ServiceImpl(), serviceAddress);
+            serviceSkeleton.start();
+        } finally {
+            wasStartAttempted = true;
+        }
     }
 
     /** Stops the naming server.
@@ -71,7 +89,12 @@ public class NamingServer implements Service, Registration
      */
     public void stop()
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (wasStartAttempted){
+            registrationSkeleton.stop();
+            serviceSkeleton.stop();
+            // TODO: interrupt as many of the threads that are executing naming server code as possible
+        }
+        stopped(null);
     }
 
     /** Indicates that the server has completely shut down.
@@ -100,16 +123,36 @@ public class NamingServer implements Service, Registration
         throw new UnsupportedOperationException("not implemented");
     }
 
+    protected TreeNode getNode(Path path){
+        TreeNode current = filesystem;
+
+        if (path.isRoot()){
+            return filesystem;
+        }
+
+        for (String component: path)
+        {
+            if (current.hasChild(component)){
+                current = current.getChild(component);
+            } else {
+                return null;
+            }
+        }
+        return current;
+    }
+
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        TreeNode node = getNode(path);
+        return node.nodeType == TreeNode.NodeType.DIRECTORY;
     }
 
     @Override
     public String[] list(Path directory) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        TreeNode node = getNode(directory);
+        return (String[]) node.children.keySet().toArray();
     }
 
     @Override
@@ -122,7 +165,31 @@ public class NamingServer implements Service, Registration
     @Override
     public boolean createDirectory(Path directory) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (directory == null){
+            throw new NullPointerException("Given null directory arg");
+        }
+        if (directory.equals(new Path("/"))){
+            return false;
+        }
+        Path parent = new Path(directory);
+        parent.removeLastComponent();
+        TreeNode node = getNode(parent);
+        if (node == null){
+            throw new FileNotFoundException("Directory not found " + parent.toString());
+        }
+        if (node.nodeType != TreeNode.NodeType.DIRECTORY){
+            throw new FileNotFoundException("Attempt to create directory inside of the file " + parent.toString());
+        }
+        if (node.hasChild(directory.last())){
+            return false;
+        }
+        return createDirectoryInTree(node, directory);
+    }
+
+    private boolean createDirectoryInTree(TreeNode parent, Path directory){
+        TreeNode newDir = new TreeNode(parent, directory.last(), TreeNode.NodeType.DIRECTORY);
+        parent.children.put(directory.last(), newDir);
+        return true;
     }
 
     @Override

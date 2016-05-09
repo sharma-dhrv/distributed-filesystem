@@ -105,6 +105,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         }
     }
 
+    public Path(Path path) {
+        if (path == null) {
+            throw new IllegalArgumentException("The exting Path is null");
+        }
+        this.pathComponents = new LinkedList<String>();
+        this.pathComponents.addAll((Collection<String>)path.pathComponents);
+    }
+
     /** Returns an iterator over the components of the path.
 
         <p>
@@ -206,6 +214,12 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
             }
         }
         return true;
+    }
+
+    public void removeLastComponent(){
+        if (!pathComponents.isEmpty()){
+            pathComponents.removeLast();
+        }
     }
 
     /** Converts the path to <code>File</code> object.
