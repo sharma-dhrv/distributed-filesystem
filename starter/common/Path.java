@@ -38,8 +38,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
 
         @param path The existing path.
         @param component The new component.
-        @throws IllegalArgumentException("
-        If <code>component</code> includes the
+        @throws IllegalArgumentException If <code>component</code> includes the
                                          separator, a colon, or
                                          <code>component</code> is the empty
                                          string.
@@ -201,8 +200,12 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public boolean isSubpath(Path other)
     {
-
-        throw new UnsupportedOperationException("not implemented");
+        for (int i=0; i<other.pathComponents.size(); i++){
+            if (other.pathComponents.get(i) != this.pathComponents.get(i)){
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Converts the path to <code>File</code> object.
@@ -213,7 +216,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public File toFile(File root)
     {
-        throw new UnsupportedOperationException("not implemented");
+        String fullPath = root.getPath() + this.toString();
+        return new File(fullPath);
     }
 
     /** Compares this path to another.
