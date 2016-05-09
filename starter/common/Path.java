@@ -259,7 +259,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public int compareTo(Path other)
     {
-        throw new UnsupportedOperationException("not implemented");
+        return this.toString().compareTo(other.toString());
     }
 
     /** Compares two paths for equality.
@@ -273,14 +273,17 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public boolean equals(Object other)
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (!other.getClass().equals(Path.class)){
+            return false;
+        }
+        return compareTo((Path)other) == 0;
     }
 
     /** Returns the hash code of the path. */
     @Override
     public int hashCode()
     {
-        throw new UnsupportedOperationException("not implemented");
+        return toString().hashCode();
     }
 
     /** Converts the path to a string.
@@ -294,6 +297,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public String toString()
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (pathComponents.isEmpty()){
+            return "/";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String component: pathComponents){
+            builder.append("/");
+            builder.append(component);
+        }
+        return builder.toString();
     }
 }
