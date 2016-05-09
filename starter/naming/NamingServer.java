@@ -33,6 +33,7 @@ import storage.*;
  */
 public class NamingServer implements Service, Registration
 {
+    private HashMap<String, StorageInfo> availableStorage;
     /** Creates the naming server object.
 
         <p>
