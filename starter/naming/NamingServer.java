@@ -34,20 +34,18 @@ import storage.*;
 public class NamingServer implements Service, Registration
 {
     TreeNode filesystem = new TreeNode();
-    private HashMap<String, StorageInfo> availableStorage;
+    private HashSet<StorageInfo> availableStorages = new HashSet<>();
     private Skeleton<Registration> registrationSkeleton;
     private Skeleton<Service> serviceSkeleton;
     private boolean wasStartAttempted = false;
+    private Random random = new Random();
 
     /** Creates the naming server object.
 
         <p>
         The naming server is not started.
      */
-    public NamingServer()
-    {
-        throw new UnsupportedOperationException("not implemented");
-    }
+    public NamingServer() { }
 
     /** Starts the naming server.
 
@@ -67,11 +65,11 @@ public class NamingServer implements Service, Registration
         }
         try{
             InetSocketAddress regAddress = new InetSocketAddress(NamingStubs.REGISTRATION_PORT);
-            registrationSkeleton = new Skeleton<>(Registration.class, new RegistrationImpl(), regAddress);
+            registrationSkeleton = new Skeleton<>(Registration.class, this, regAddress);
             registrationSkeleton.start();
 
             InetSocketAddress serviceAddress = new InetSocketAddress(NamingStubs.SERVICE_PORT);
-            serviceSkeleton = new Skeleton<>(Service.class, new ServiceImpl(), serviceAddress);
+            serviceSkeleton = new Skeleton<>(Service.class, this, serviceAddress);
             serviceSkeleton.start();
         } finally {
             wasStartAttempted = true;
@@ -155,41 +153,85 @@ public class NamingServer implements Service, Registration
         return (String[]) node.children.keySet().toArray();
     }
 
+    protected boolean isValidCreationPath(Path path){
+        if (path == null) {
+            throw new NullPointerException("Given null creation path argument");
+        }
+        if (path.equals(new Path("/"))){
+            return false;
+        }
+        return true;
+    }
+
+    protected TreeNode getParentNode(Path path){
+        Path parent = new Path(path);
+        parent.removeLastComponent();
+        TreeNode node = getNode(parent);
+        return node;
+    }
+
+    protected boolean checkParentForCreation(TreeNode parent, Path path) throws FileNotFoundException {
+        if (parent == null){
+            throw new FileNotFoundException("Directory not found along the path " + path.toString());
+        }
+        if (parent.nodeType != TreeNode.NodeType.DIRECTORY){
+            throw new FileNotFoundException("Attempt to create file or directory inside of the file along the path" +
+                    path.toString());
+        }
+        if (parent.hasChild(path.last())){
+            return false;
+        }
+        return true;
+    }
+
+    private TreeNode createNodeInTree(TreeNode parent, Path path, TreeNode.NodeType type){
+        TreeNode newNode = new TreeNode(parent, path.last(), type);
+        parent.children.put(path.last(), newNode);
+        return newNode;
+    }
+
     @Override
-    public boolean createFile(Path file)
-        throws RMIException, FileNotFoundException
+    public boolean createFile(Path file) throws RMIException, FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (isValidCreationPath(file)){
+            TreeNode parent = getParentNode(file);
+            if (checkParentForCreation(parent, file)){
+                return createFileInStorageAndTree(parent, file);
+            }
+        }
+        return false;
+    }
+
+    private synchronized boolean createFileInStorageAndTree(TreeNode parent, Path file) throws RMIException {
+        StorageInfo storage = chooseStorage();
+        boolean result = storage.stub.create(file);
+
+        if (result){
+            TreeNode newNode = createNodeInTree(parent, file, TreeNode.NodeType.FILE);
+            storage.addFile(newNode);
+            newNode.storages.add(storage);
+            return true;
+        }
+        return false;
+    }
+
+    private synchronized StorageInfo chooseStorage() {
+        // TODO: CHECK IF StorageInfo IS PASSED AROUND AS REFERENCE AND NOT COPY
+        int choice = random.nextInt(availableStorages.size());
+        return (StorageInfo) availableStorages.toArray()[choice];
     }
 
     @Override
     public boolean createDirectory(Path directory) throws FileNotFoundException
     {
-        if (directory == null){
-            throw new NullPointerException("Given null directory arg");
+        if (isValidCreationPath(directory)){
+            TreeNode parent = getParentNode(directory);
+            if (checkParentForCreation(parent, directory)){
+                createNodeInTree(parent, directory, TreeNode.NodeType.DIRECTORY);
+                return true;
+            }
         }
-        if (directory.equals(new Path("/"))){
-            return false;
-        }
-        Path parent = new Path(directory);
-        parent.removeLastComponent();
-        TreeNode node = getNode(parent);
-        if (node == null){
-            throw new FileNotFoundException("Directory not found " + parent.toString());
-        }
-        if (node.nodeType != TreeNode.NodeType.DIRECTORY){
-            throw new FileNotFoundException("Attempt to create directory inside of the file " + parent.toString());
-        }
-        if (node.hasChild(directory.last())){
-            return false;
-        }
-        return createDirectoryInTree(node, directory);
-    }
-
-    private boolean createDirectoryInTree(TreeNode parent, Path directory){
-        TreeNode newDir = new TreeNode(parent, directory.last(), TreeNode.NodeType.DIRECTORY);
-        parent.children.put(directory.last(), newDir);
-        return true;
+        return false;
     }
 
     @Override

@@ -1,7 +1,5 @@
 package naming;
 
-import common.Path;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,7 +19,7 @@ public class TreeNode {
 
     // Metadata
     public int numAccesses;
-    public ArrayList<String> storages;
+    public ArrayList<StorageInfo> storages;
 
     // Locks
     public ConcurrentLinkedQueue<DfsLock> currentLocks = new ConcurrentLinkedQueue<>();

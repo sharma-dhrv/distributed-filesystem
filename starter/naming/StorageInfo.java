@@ -19,6 +19,10 @@ public class StorageInfo {
         paths = new ArrayList<TreeNode>();
     }
 
+    public void addFile(TreeNode file){
+        paths.add(file);
+    }
+
     public void addPaths(List<Path> paths){
         throw new NotImplementedException();
     }
