@@ -22,16 +22,18 @@ import java.util.*;
 public class Path implements Iterable<String>, Comparable<Path>, Serializable
 {
 
-    // Create a LinkedList<String> to store the components of a path
-    public LinkedList<String> pathComponents;
+    // Create a ArrayList<String> to store the components of a path
+    public ArrayList<String> pathComponents;
 
     // Create a Path Separator variable
     private String pathSeparator = "/";
+    private String illegalSeparator = ":";
+    private static final long serialVersionUID = 10171991L;
 
     /** Creates a new path which represents the root directory. */
     public Path()
     {
-        this.pathComponents = new LinkedList<String>();
+        this.pathComponents = new ArrayList<String>();
     }
 
     /** Creates a new path by appending the given component to an existing path.
@@ -54,16 +56,16 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
           throw new IllegalArgumentException("Component is empty");
         }
 
-        if (component.indexOf(pathSeparator) != -1) {
-          throw new IllegalArgumentException("Component includes separator /");
+        if (component.indexOf(pathSeparator) != -1 || (component.indexOf(illegalSeparator) != -1)) {
+          throw new IllegalArgumentException("Component includes separator / or :");
         }
 
         if (path == null) {
           throw new IllegalArgumentException("The exting Path is null");
         }
 
-        // Create the LinkedList
-        this.pathComponents = new LinkedList<String>();
+        // Create the ArrayList
+        this.pathComponents = new ArrayList<String>();
 
         // Add existing path to the list
         this.pathComponents.addAll((Collection<String>)path.pathComponents);
@@ -95,21 +97,29 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
           throw new IllegalArgumentException("The existing path doesn't start with /");
         }
 
-        // Create the LinkedList
-        this.pathComponents = new LinkedList<String>();
+        if (path.contains(illegalSeparator)) {
+          throw new IllegalArgumentException("The exiting path contains :");
+        }
 
-        // Toekinze the path and add to the LinkedList
+        // Create the ArrayList
+        this.pathComponents = new ArrayList<String>();
+
+        // Toekinze the path and add to the ArrayList
         StringTokenizer st = new StringTokenizer(path, pathSeparator);
         while (st.hasMoreTokens()) {
             this.pathComponents.add(st.nextToken());
         }
     }
 
+    public Path(ArrayList<String> components){
+    	this.pathComponents = components;
+    }
+
     public Path(Path path) {
         if (path == null) {
             throw new IllegalArgumentException("The exting Path is null");
         }
-        this.pathComponents = new LinkedList<String>();
+        this.pathComponents = new ArrayList<>();
         this.pathComponents.addAll((Collection<String>)path.pathComponents);
     }
 
@@ -162,7 +172,45 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public static Path[] list(File directory) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+      if(!directory.exists()) {
+              throw new FileNotFoundException("Root directory does not exist");
+      }
+      if(!directory.isDirectory()) {
+              throw new IllegalArgumentException("Directory exists but does not"
+               + "refer to a directory");
+      }
+
+      ArrayList<Path> paths = new ArrayList<Path>();
+    	ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
+    	Path[] files = new Path[0];
+    	return resultPaths.toArray(files);
+
+    }
+
+    /** Helper routine to list files in a directory recursively
+     */
+    public static ArrayList<Path> listRec(Path p, File directory,
+          	ArrayList<Path> paths) throws FileNotFoundException {
+
+          	if (!directory.exists()) {
+          		throw new FileNotFoundException("Directory doesn't exist");
+          	}
+            if(!directory.isDirectory()) {
+              throw new IllegalArgumentException("Directory exists but does not"
+                     + "refer to a directory");
+            }
+
+          	File[] files = directory.listFiles();
+          	for (File f : files) {
+          		if (f.isFile()) {
+          			paths.add(new Path(p, f.getName()));
+          		}
+          		else if (f.isDirectory()) {
+          			listRec(new Path (p, f.getName()), f, paths);
+          		}
+          	}
+
+          	return paths;
     }
 
     /** Determines whether the path represents the root directory.
@@ -172,7 +220,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public boolean isRoot()
     {
-        throw new UnsupportedOperationException("not implemented");
+        return this.pathComponents.isEmpty();
     }
 
     /** Returns the path to the parent of this path.
@@ -182,7 +230,15 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public Path parent()
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (isRoot()) {
+          throw new IllegalArgumentException("Path represents the root directory, " +
+                                              "and therefore has no parent");
+        }
+
+        ArrayList<String> parentPathComponents = new ArrayList<String>();
+        parentPathComponents.addAll(pathComponents);
+        parentPathComponents.remove(parentPathComponents.size()-1);
+        return new Path(parentPathComponents);
     }
 
     /** Returns the last component in the path.
@@ -193,7 +249,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public String last()
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (this.isRoot()) {
+          throw new IllegalArgumentException("Path represents the root and has no last component");
+        }
+
+        return this.pathComponents.get(pathComponents.size()-1);
     }
 
     /** Determines if the given path is a subpath of this path.
@@ -218,7 +278,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
 
     public void removeLastComponent(){
         if (!pathComponents.isEmpty()){
-            pathComponents.removeLast();
+            pathComponents.remove(pathComponents.size()-1);
         }
     }
 
