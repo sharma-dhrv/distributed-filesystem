@@ -268,8 +268,11 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public boolean isSubpath(Path other)
     {
+        if (other.pathComponents.size() > this.pathComponents.size()){
+            return false;
+        }
         for (int i=0; i<other.pathComponents.size(); i++){
-            if (other.pathComponents.get(i) != this.pathComponents.get(i)){
+            if (!other.pathComponents.get(i).equals(this.pathComponents.get(i))){
                 return false;
             }
         }
