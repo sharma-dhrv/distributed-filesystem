@@ -2,6 +2,7 @@ package naming;
 
 import common.Path;
 import storage.Command;
+import storage.Storage;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
@@ -11,14 +12,20 @@ import java.util.List;
  * Created by Sreejith Unnikrishnan on 5/9/16.
  */
 public class StorageInfo {
-    public Command stub;
+    public Command commandStub;
+    public Storage clientStub;
     public ArrayList<TreeNode> paths;
 
     public StorageInfo(Command command){
-        stub = command;
+        commandStub = command;
         paths = new ArrayList<TreeNode>();
     }
 
+    public StorageInfo(Storage client, Command command){
+        clientStub = client;
+        commandStub = command;
+        paths = new ArrayList<TreeNode>();
+    }
     public void addFile(TreeNode file){
         paths.add(file);
     }

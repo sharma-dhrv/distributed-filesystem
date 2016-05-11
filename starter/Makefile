@@ -51,7 +51,7 @@ jar : all-classes
 # Compile all Java files.
 .PHONY : all-classes
 all-classes :
-	javac $(JAVAFILES)
+	javac -cp .:reference-rmi.jar $(JAVAFILES)
 
 # Run unit and conformance tests.
 .PHONY : test

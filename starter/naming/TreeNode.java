@@ -9,6 +9,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class TreeNode {
 
+    public TreeNode addChild(TreeNode child) {
+        child.parent = this;
+        children.put(child.nodeName, child);
+        return child;
+    }
+
     public enum NodeType {FILE, DIRECTORY};
 
     // Structure
@@ -44,5 +50,9 @@ public class TreeNode {
     }
     public TreeNode getChild(String component){
         return children.get(component);
+    }
+
+    public void addStorage(StorageInfo storage){
+        storages.add(storage);
     }
 }

@@ -123,7 +123,6 @@ public class NamingServer implements Service, Registration
 
     protected TreeNode getNode(Path path){
         TreeNode current = filesystem;
-
         if (path.isRoot()){
             return filesystem;
         }
@@ -184,12 +183,6 @@ public class NamingServer implements Service, Registration
         return true;
     }
 
-    private TreeNode createNodeInTree(TreeNode parent, Path path, TreeNode.NodeType type){
-        TreeNode newNode = new TreeNode(parent, path.last(), type);
-        parent.children.put(path.last(), newNode);
-        return newNode;
-    }
-
     @Override
     public boolean createFile(Path file) throws RMIException, FileNotFoundException
     {
@@ -204,10 +197,10 @@ public class NamingServer implements Service, Registration
 
     private synchronized boolean createFileInStorageAndTree(TreeNode parent, Path file) throws RMIException {
         StorageInfo storage = chooseStorage();
-        boolean result = storage.stub.create(file);
+        boolean result = storage.commandStub.create(file);
 
         if (result){
-            TreeNode newNode = createNodeInTree(parent, file, TreeNode.NodeType.FILE);
+            TreeNode newNode = parent.addChild(new TreeNode(parent,file.last(), TreeNode.NodeType.FILE));
             storage.addFile(newNode);
             newNode.storages.add(storage);
             return true;
@@ -227,7 +220,7 @@ public class NamingServer implements Service, Registration
         if (isValidCreationPath(directory)){
             TreeNode parent = getParentNode(directory);
             if (checkParentForCreation(parent, directory)){
-                createNodeInTree(parent, directory, TreeNode.NodeType.DIRECTORY);
+                parent.addChild(new TreeNode(parent, directory.last(), TreeNode.NodeType.DIRECTORY));
                 return true;
             }
         }
@@ -243,14 +236,81 @@ public class NamingServer implements Service, Registration
     @Override
     public Storage getStorage(Path file) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (file == null) {
+            throw new NullPointerException("Given null Path argument");
+        }
+        TreeNode node = getNode(file);
+        if (node == null){
+            throw new FileNotFoundException("File not found along the path " + file.toString());
+        }
+        if (node.nodeType == TreeNode.NodeType.DIRECTORY){
+            throw new FileNotFoundException("Expected path to file, found directory along the path " + file.toString());
+        }
+        // TODO: ping the Storage Server before giving it to client. Maybe it's dead and file isn't available
+        return node.storages.get(0).clientStub;
     }
 
     // The method register is documented in Registration.java.
     @Override
-    public Path[] register(Storage client_stub, Command command_stub,
-                           Path[] files)
+    public Path[] register(Storage client_stub, Command command_stub, Path[] files)
     {
-        throw new UnsupportedOperationException("not implemented");
+        // TODO: add exclusive lock
+        checkRegisterArgs(client_stub, command_stub, files);
+        return registerStorage(client_stub, command_stub, files);
+
+    }
+
+    private void checkRegisterArgs(Storage client_stub, Command command_stub, Path[] files){
+        if (client_stub == null || command_stub == null || files == null){
+            throw new NullPointerException("Some of register arguments is null");
+        }
+        if (isStorageRegistered(client_stub, command_stub)){
+            throw new IllegalStateException("Storage is already registered");
+        }
+    }
+
+    private boolean isStorageRegistered(Storage client_stub, Command command_stub) {
+        for (StorageInfo storage: availableStorages){
+            if (storage.clientStub.equals(client_stub) || storage.commandStub.equals(command_stub)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Path[] registerStorage(Storage client_stub, Command command_stub, Path[] files){
+        StorageInfo storage = new StorageInfo(client_stub, command_stub);
+        ArrayList<Path> duplicatePaths = new ArrayList<>();
+        for (Path path: files){
+            TreeNode node = getNode(path);
+            if (node == null){
+                duplicatePaths.add(path);
+            } else {
+                node = createPathInTree(path);
+                node.addStorage(storage);
+                storage.addFile(node);
+            }
+        }
+        // TODO: maybe call command_stub.delete(path) for each path in duplicatePaths (to delete physical files synchronously)
+        return (Path[]) duplicatePaths.toArray();
+    }
+
+    private TreeNode createPathInTree(Path path){
+        // File doesn't exist according to previous checks
+        TreeNode current = createDirectoriesAlong(path.getPathWithoutLastComponent());
+        return current.addChild(new TreeNode(current, path.last(), TreeNode.NodeType.FILE));
+    }
+
+    private TreeNode createDirectoriesAlong(Path path){
+        TreeNode current = filesystem;
+
+        for (String component: path)
+        {
+            if (!current.hasChild(component)){
+                current.addChild(new TreeNode(current, component, TreeNode.NodeType.DIRECTORY));
+            }
+            current = current.getChild(component);
+        }
+        return current;
     }
 }

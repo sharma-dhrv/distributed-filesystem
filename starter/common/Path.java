@@ -222,6 +222,12 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         }
     }
 
+    public Path getPathWithoutLastComponent(){
+        Path parent = new Path(this);
+        parent.removeLastComponent();
+        return parent;
+    }
+
     /** Converts the path to <code>File</code> object.
 
         @param root The resulting <code>File</code> object is created relative
