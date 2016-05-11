@@ -2,7 +2,8 @@ package storage;
 
 import java.io.*;
 import java.net.*;
-
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import common.*;
 import rmi.*;
 import naming.*;
@@ -16,6 +17,8 @@ import naming.*;
  */
 public class StorageServer implements Storage, Command
 {
+    public File root;
+
     /** Creates a storage server, given a directory on the local filesystem, and
         ports to use for the client and command interfaces.
 
@@ -101,40 +104,153 @@ public class StorageServer implements Storage, Command
     @Override
     public synchronized long size(Path file) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        File f = file.toFile(root);
+
+        if (f != null && f.exists() && f.isFile()) {
+          return f.length();
+        } else {
+          throw new FileNotFoundException("Size cannot be obtained for File" + f);
+        }
     }
 
     @Override
     public synchronized byte[] read(Path file, long offset, int length)
         throws FileNotFoundException, IOException
     {
-        throw new UnsupportedOperationException("not implemented");
+        File fileRead = file.toFile(root);
+        FileInputStream fis;
+        byte[] buffer;
+
+        if (fileRead != null && !fileRead.exists()) {
+            if (!fileRead.isFile()) {
+                if (offset >= 0 && offset + length <= size(file) && length >= 0) {
+                  fis = new FileInputStream(fileRead);
+                  fis.skip(offset);
+                  buffer = new byte[length];
+                  try {
+                    fis.read(buffer);
+                  } catch(IOException e) {
+                    fis.close();
+                    System.out.println(e);
+                  }
+                } else {
+                  throw new IndexOutOfBoundsException("Length and offset should be positive");
+                }
+            } else {
+              throw new FileNotFoundException("Not a file");
+            }
+        } else {
+          throw new FileNotFoundException("File doesn't exist");
+        }
     }
 
     @Override
     public synchronized void write(Path file, long offset, byte[] data)
         throws FileNotFoundException, IOException
     {
-        throw new UnsupportedOperationException("not implemented");
+      File fileToWrite = file.toFile (root);
+      FileChannel channel;
+      long bytesWritten;
+
+      if (fileToWrite.isFile()) {
+          if (offset >= 0) {
+            channel = new FileOutputStream(fileToWrite).getChannel();
+            channel.position(offset);
+            bytesWritten = channel.write(ByteBuffer.wrap (data));
+
+            if (data.length != bytesWritten) {
+                throw new IOException ("Failed in writing data to the file. Wrote " +
+                        bytesWritten + " instead of " + data.length);
+            }
+          } else {
+            throw new IndexOutOfBoundsException("Offset cannot be negative.");
+          }
+        } else {
+            throw new FileNotFoundException(fileToWrite + " is not a file.");
+        }
     }
 
     // The following methods are documented in Command.java.
     @Override
     public synchronized boolean create(Path file)
     {
-        throw new UnsupportedOperationException("not implemented");
+      File fileToCreate = file.toFile(root);
+      if (file.isRoot()) {
+        return false;
+      }
+
+      File parentFile = file.parent().toFile(root);
+
+      if (!parentFile.isDirectory()) {
+        parentFile.mkdirs();
+      }
+
+      try {
+        return fileToCreate.createNewFile();
+      } catch (IOException e) {
+        return false;
+      }
     }
 
     @Override
     public synchronized boolean delete(Path path)
     {
-        throw new UnsupportedOperationException("not implemented");
+      File fileToDelete = path.toFile(root);
+
+      if (path.isRoot()) {
+        return false;
+      }
+
+      if (fileToDelete.isFile()) {
+        return fileToDelete.delete();
+      } else {
+        File[] fileList = fileToDelete.listFiles();
+
+        if (fileList != null) {
+          for (File fil : fileList) {
+            if(deleteDir(fil) == false){
+              return false;
+            }
+            }
+        }
+      return fileToDelete.delete();
+      }
+    }
+
+    private boolean deleteDir(File f) {
+    	File[] fileList = f.listFiles();
+
+    	if (fileList != null) {
+    		for (File f1 : fileList) {
+    			if(deleteDir(f1) == false){
+    				return false;
+    			}
+        	}
+    	}
+
+		  return f.delete();
     }
 
     @Override
     public synchronized boolean copy(Path file, Storage server)
         throws RMIException, FileNotFoundException, IOException
     {
-        throw new UnsupportedOperationException("not implemented");
+      File f = file.toFile(root);
+      long fSize = server.size(file);
+      byte[] bytes;
+      int reads = Integer.MAX_VALUE;
+
+      if (f.exists()) {
+        f.delete();
+      }
+      create(file);
+
+      for(long offset = 0; offset < fSize; offset += reads) {
+        reads = (int) Math.min(reads, fSize - offset);
+        bytes = server.read(file, offset, reads);
+        write(file, offset, bytes);
+      }
+
+      return true;
     }
 }
