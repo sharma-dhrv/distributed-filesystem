@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import conformance.common.DfsUtils;
 import rmi.*;
 import common.*;
 import storage.*;
@@ -149,7 +150,8 @@ public class NamingServer implements Service, Registration
     public String[] list(Path directory) throws FileNotFoundException
     {
         TreeNode node = getNode(directory);
-        return (String[]) node.children.keySet().toArray();
+
+        return node.children.keySet().toArray(new String[node.children.size()]);
     }
 
     protected boolean isValidCreationPath(Path path){
@@ -281,6 +283,7 @@ public class NamingServer implements Service, Registration
     private Path[] registerStorage(Storage client_stub, Command command_stub, Path[] files){
         StorageInfo storage = new StorageInfo(client_stub, command_stub);
         ArrayList<Path> duplicatePaths = new ArrayList<>();
+
         for (Path path: files){
             TreeNode node = getNode(path);
             if (node == null){
@@ -292,7 +295,7 @@ public class NamingServer implements Service, Registration
             }
         }
         // TODO: maybe call command_stub.delete(path) for each path in duplicatePaths (to delete physical files synchronously)
-        return (Path[]) duplicatePaths.toArray();
+        return duplicatePaths.toArray(new Path[duplicatePaths.size()]);
     }
 
     private TreeNode createPathInTree(Path path){
