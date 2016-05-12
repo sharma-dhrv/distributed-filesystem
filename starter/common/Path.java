@@ -182,8 +182,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
 
       ArrayList<Path> paths = new ArrayList<Path>();
       ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
-      Path[] files = new Path[0];
-      return resultPaths.toArray(files);
+      return resultPaths.toArray(new Path[resultPaths.size()]);
     }
 
     /** Helper routine to list files in a directory recursively

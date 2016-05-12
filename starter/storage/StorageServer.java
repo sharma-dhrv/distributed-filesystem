@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+
 import common.*;
 import rmi.*;
 import naming.*;
@@ -219,15 +221,12 @@ public class StorageServer implements Storage, Command
         if (fileRead != null && !fileRead.exists()) {
             if (!fileRead.isFile()) {
                 if (offset >= 0 && offset + length <= size(file) && length >= 0) {
-                  fis = new FileInputStream(fileRead);
-                  fis.skip(offset);
-                  buffer = new byte[length];
-                  try {
+                    fis = new FileInputStream(fileRead);
+                    fis.skip(offset);
+                    buffer = new byte[length];
                     fis.read(buffer);
-                  } catch(IOException e) {
                     fis.close();
-                    System.out.println(e);
-                  }
+                    return buffer;
                 } else {
                   throw new IndexOutOfBoundsException("Length and offset should be positive");
                 }
