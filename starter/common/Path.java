@@ -296,7 +296,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public File toFile(File root)
     {
-        String fullPath = root.getPath() + this.toString();
+        String fullPath = root.getAbsolutePath() + this.toString();
         return new File(fullPath);
     }
 
