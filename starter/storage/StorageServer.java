@@ -19,6 +19,7 @@ import naming.*;
  * local filesystem.
  */
 public class StorageServer implements Storage, Command {
+	
 	private File root;
 	private int clientPort;
 	private int commandPort;
@@ -83,8 +84,8 @@ public class StorageServer implements Storage, Command {
 		}
 
 		this.root = root;
-		this.clientPort = 0;
-		this.commandPort = 0;
+		this.clientPort = 4000;
+		this.commandPort = 4001;
 		this.hostname = null;
 		this.commandSkeleton = null;
 		this.storageSkeleton = null;
@@ -228,8 +229,8 @@ public class StorageServer implements Storage, Command {
 		FileInputStream fis;
 		byte[] buffer;
 
-		if (fileRead != null && !fileRead.exists()) {
-			if (!fileRead.isFile()) {
+		if (fileRead != null && fileRead.exists()) {
+			if (fileRead.isFile()) {
 				if (offset >= 0 && offset + length <= size(file) && length >= 0) {
 					fis = new FileInputStream(fileRead);
 					fis.skip(offset);
@@ -296,8 +297,6 @@ public class StorageServer implements Storage, Command {
 	@Override
 	public synchronized boolean delete(Path path) {
 		File fileToDelete = path.toFile(root);
-		
-		System.err.println("Deleting : " + path.toString());
 		
 		if (path.isRoot()) {
 			return false;
