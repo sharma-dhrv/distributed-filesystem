@@ -23,7 +23,6 @@ public class StorageServer implements Storage, Command {
 	private int clientPort;
 	private int commandPort;
 	private String hostname;
-	private Registration naming_server;
 	private Skeleton<Command> commandSkeleton;
 	private Skeleton<Storage> storageSkeleton;
 
@@ -59,7 +58,6 @@ public class StorageServer implements Storage, Command {
 		this.clientPort = client_port;
 		this.commandPort = command_port;
 		this.hostname = null;
-		this.naming_server = null;
 		this.commandSkeleton = null;
 		this.storageSkeleton = null;
 		this.startedOnce = false;
@@ -88,7 +86,6 @@ public class StorageServer implements Storage, Command {
 		this.clientPort = 0;
 		this.commandPort = 0;
 		this.hostname = null;
-		this.naming_server = null;
 		this.commandSkeleton = null;
 		this.storageSkeleton = null;
 		this.startedOnce = false;
@@ -160,17 +157,20 @@ public class StorageServer implements Storage, Command {
 
 			InetSocketAddress commandServiceAddress = new InetSocketAddress(hostname, commandPort);
 			Command commandStub = Stub.create(Command.class, commandServiceAddress);
-			Skeleton<Command> commandSkeleton = new Skeleton(Command.class, this, commandServiceAddress);
+			commandSkeleton = new Skeleton(Command.class, this, commandServiceAddress);
 			commandSkeleton.start();
 
 			InetSocketAddress storageServiceAddress = new InetSocketAddress(hostname, clientPort);
-			Storage clientStub = Stub.create(Storage.class, storageServiceAddress);
-			Skeleton<Command> storageSkeleton = new Skeleton(Command.class, this, storageServiceAddress);
+			Storage storageStub = Stub.create(Storage.class, storageServiceAddress);
+			storageSkeleton = new Skeleton(Storage.class, this, storageServiceAddress);
 			storageSkeleton.start();
 
 			ArrayList<Path> fileList = parseFiles(root, new Path(Path.pathSeparator), new ArrayList<Path>());
 
-			naming_server.register(clientStub, commandStub, fileList.toArray(new Path[fileList.size()]));
+			Path[] filesToDelete = naming_server.register(storageStub, commandStub, fileList.toArray(new Path[fileList.size()]));
+			for(Path path : filesToDelete) {
+				delete(path);
+			}
 
 			startedOnce = true;
 			active = true;
@@ -246,8 +246,6 @@ public class StorageServer implements Storage, Command {
 		} else {
 			throw new FileNotFoundException("File doesn't exist");
 		}
-
-		// return buffer;
 	}
 
 	@Override
@@ -298,14 +296,16 @@ public class StorageServer implements Storage, Command {
 	@Override
 	public synchronized boolean delete(Path path) {
 		File fileToDelete = path.toFile(root);
-
+		
+		System.err.println("Deleting : " + path.toString());
+		
 		if (path.isRoot()) {
 			return false;
 		}
+		
+		Path parentPath = path.parent();
 
-		if (fileToDelete.isFile()) {
-			return fileToDelete.delete();
-		} else {
+		if (fileToDelete.isDirectory()) {
 			File[] fileList = fileToDelete.listFiles();
 
 			if (fileList != null) {
@@ -315,8 +315,16 @@ public class StorageServer implements Storage, Command {
 					}
 				}
 			}
-			return fileToDelete.delete();
+			
 		}
+		
+		boolean deleteSuccess = fileToDelete.delete();
+		while(!parentPath.isRoot() && parentPath.toFile(root).listFiles().length == 0) {
+			parentPath.toFile(root).delete();
+			parentPath = parentPath.parent();
+		}
+		
+		return deleteSuccess;
 	}
 
 	private boolean deleteDir(File f) {
