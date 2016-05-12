@@ -236,8 +236,6 @@ public class StorageServer implements Storage, Command
         } else {
           throw new FileNotFoundException("File doesn't exist");
         }
-
-	return buffer;
     }
 
     @Override
