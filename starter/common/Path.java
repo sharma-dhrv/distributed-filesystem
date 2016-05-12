@@ -181,36 +181,34 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
       }
 
       ArrayList<Path> paths = new ArrayList<Path>();
-    	ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
-    	Path[] files = new Path[0];
-    	return resultPaths.toArray(files);
-
+      ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
+      Path[] files = new Path[0];
+      return resultPaths.toArray(files);
     }
 
     /** Helper routine to list files in a directory recursively
      */
     public static ArrayList<Path> listRec(Path p, File directory,
-          	ArrayList<Path> paths) throws FileNotFoundException {
+        ArrayList<Path> paths) throws FileNotFoundException {
 
-          	if (!directory.exists()) {
-          		throw new FileNotFoundException("Directory doesn't exist");
-          	}
-            if(!directory.isDirectory()) {
-              throw new IllegalArgumentException("Directory exists but does not"
+        if (!directory.exists()) {
+          	throw new FileNotFoundException("Directory doesn't exist");
+        }
+        if(!directory.isDirectory()) {
+            throw new IllegalArgumentException("Directory exists but does not"
                      + "refer to a directory");
-            }
+        }
 
-          	File[] files = directory.listFiles();
-          	for (File f : files) {
-          		if (f.isFile()) {
-          			paths.add(new Path(p, f.getName()));
-          		}
-          		else if (f.isDirectory()) {
-          			listRec(new Path (p, f.getName()), f, paths);
-          		}
+        File[] files = directory.listFiles();
+        for (File f : files) {
+          	if (f.isFile()) {
+          		paths.add(new Path(p, f.getName()));
+          	} else if (f.isDirectory()) {
+          		listRec(new Path (p, f.getName()), f, paths);
           	}
+         }
 
-          	return paths;
+        return paths;
     }
 
     /** Determines whether the path represents the root directory.
