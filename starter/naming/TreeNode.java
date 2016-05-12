@@ -22,7 +22,7 @@ public class TreeNode {
 
     // Metadata
     public int numAccesses;
-    public ArrayList<StorageInfo> storages;
+    public ArrayList<StorageInfo> storages = new ArrayList<>();
 
     // Locks
     public LinkedList<DfsLock> currentLocks = new LinkedList<>();

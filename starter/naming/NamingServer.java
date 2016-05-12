@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import conformance.common.DfsUtils;
+import common.DfsUtils;
 import rmi.*;
 import common.*;
 import storage.*;
@@ -321,16 +321,24 @@ public class NamingServer implements Service, Registration
 
     private Path[] registerStorage(Storage client_stub, Command command_stub, Path[] files){
         StorageInfo storage = new StorageInfo(client_stub, command_stub);
+        availableStorages.add(storage);
+        Path[] duplicatePaths = addPathsAndGetDuplicates(storage, files);
+        return duplicatePaths;
+    }
+
+    private Path[] addPathsAndGetDuplicates(StorageInfo storage, Path[] files){
         ArrayList<Path> duplicatePaths = new ArrayList<>();
 
         for (Path path: files){
-            TreeNode node = getNode(path);
-            if (node == null){
-                duplicatePaths.add(path);
-            } else {
-                node = createPathInTree(path);
-                node.addStorage(storage);
-                storage.addFile(node);
+            if (!path.isRoot()){
+                TreeNode node = getNode(path);
+                if (node != null){
+                    duplicatePaths.add(path);
+                } else {
+                    node = createPathInTree(path);
+                    node.addStorage(storage);
+                    storage.addFile(node);
+                }
             }
         }
         // TODO: maybe call command_stub.delete(path) for each path in duplicatePaths (to delete physical files synchronously)

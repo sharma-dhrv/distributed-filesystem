@@ -30,19 +30,19 @@ public class StorageInfo {
         paths.add(file);
     }
 
-    public void addPaths(List<Path> paths){
-        throw new NotImplementedException();
-    }
-
-    public void addPath(Path path){
-        throw new NotImplementedException();
-    }
-
-    public void removePath(Path path){
-        throw new NotImplementedException();
-    }
-
-    public void deleteStub(){
-        throw new NotImplementedException();
-    }
+//    public void addPaths(List<Path> paths){
+//        throw new NotImplementedException();
+//    }
+//
+//    public void addPath(Path path){
+//        throw new NotImplementedException();
+//    }
+//
+//    public void removePath(Path path){
+//        throw new NotImplementedException();
+//    }
+//
+//    public void deleteStub(){
+//        throw new NotImplementedException();
+//    }
 }
