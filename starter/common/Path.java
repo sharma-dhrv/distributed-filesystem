@@ -26,8 +26,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     public ArrayList<String> pathComponents;
 
     // Create a Path Separator variable
-    private String pathSeparator = "/";
-    private String illegalSeparator = ":";
+    public static final String pathSeparator = "/";
+    public static final String illegalSeparator = ":";
     private static final long serialVersionUID = 10171991L;
 
     /** Creates a new path which represents the root directory. */

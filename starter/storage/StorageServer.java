@@ -17,7 +17,16 @@ import naming.*;
  */
 public class StorageServer implements Storage, Command
 {
-    public File root;
+	private File root;
+	private int clientPort;
+	private int commandPort;
+	private String hostname;
+	private Registration naming_server;
+	private Skeleton<Command> commandSkeleton;
+	private Skeleton<Storage> storageSkeleton;
+	
+	private boolean startedOnce;
+	private boolean active;
 
     /** Creates a storage server, given a directory on the local filesystem, and
         ports to use for the client and command interfaces.
@@ -36,7 +45,19 @@ public class StorageServer implements Storage, Command
     */
     public StorageServer(File root, int client_port, int command_port)
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if (root == null) {
+			throw new NullPointerException("Storage server mount point is null.");
+		}
+
+		this.root = root;
+		this.clientPort = client_port;
+		this.commandPort = command_port;
+		this.hostname = null;
+		this.naming_server = null;
+		this.commandSkeleton = null;
+		this.storageSkeleton = null;
+		this.startedOnce = false;
+		this.active = false;
     }
 
     /** Creats a storage server, given a directory on the local filesystem.
@@ -52,8 +73,44 @@ public class StorageServer implements Storage, Command
      */
     public StorageServer(File root)
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if (root == null) {
+			throw new NullPointerException("Storage server mount point is null.");
+		}
+
+		this.root = root;
+		this.clientPort = 0;
+		this.commandPort = 0;
+		this.hostname = null;
+		this.naming_server = null;
+		this.commandSkeleton = null;
+		this.storageSkeleton = null;
+		this.startedOnce = false;
+		this.active = false;
     }
+    
+    /**
+     * Parse the files present under mount point on this storage server and return a list of their paths.
+     * 
+     * @param parentDirectory {@link File} object for the parent directory
+     * @param parentPath Path object ffor the parent directory path
+     * @param files list of {@link Path} objects of all contained files
+     * 
+     * @return List of {@link Path} objects for all files
+     */
+	private ArrayList<Path> parseFiles(File parentDirectory, Path parentPath, ArrayList<Path> files) {
+		for (File file : parentDirectory.listFiles()) {
+			if(file.isFile()) {
+				files.add(new Path(parentPath, file.getName()));
+			} else if(file.isDirectory()) {
+				Path directoryPath = new Path(parentPath, file.getName());
+				parseFiles(file, directoryPath, files);
+			} else {
+				// Do nothing
+			}
+		}
+		
+		return files;
+	}
 
     /** Starts the storage server and registers it with the given naming
         server.
@@ -78,7 +135,39 @@ public class StorageServer implements Storage, Command
     public synchronized void start(String hostname, Registration naming_server)
         throws RMIException, UnknownHostException, FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if(!startedOnce && !active) {
+			if (!root.exists()) {
+				throw new FileNotFoundException(
+						"Root directory " + root.getPath() + " for the storage server does not exist.");
+			}
+	
+			if (!root.isDirectory()) {
+				throw new FileNotFoundException("Root " + root.getPath() + " for the storage server is not a directory.");
+			}
+	
+			InetSocketAddress commandServiceAddress = new InetSocketAddress(hostname, commandPort);
+			Command commandStub = Stub.create(Command.class, commandServiceAddress);
+			Skeleton<Command> commandSkeleton = new Skeleton(Command.class, this, commandServiceAddress);
+			commandSkeleton.start();
+	
+			InetSocketAddress storageServiceAddress = new InetSocketAddress(hostname, clientPort);
+			Storage clientStub = Stub.create(Storage.class, storageServiceAddress);
+			Skeleton<Command> storageSkeleton = new Skeleton(Command.class, this, storageServiceAddress);
+			storageSkeleton.start();
+	
+			ArrayList<Path> fileList = parseFiles(root, new Path(Path.pathSeparator), new ArrayList<Path>());
+			
+			naming_server.register(clientStub, commandStub, fileList.toArray(new Path[fileList.size()]));
+			
+			startedOnce = true;
+			active = true;
+		} else if(startedOnce && active) {
+			System.err.println("Storage server is already running.");
+		} else if(startedOnce && !active) {
+			System.err.println("Storage server was already shutdown.");
+		} else {
+			// Do nothing; As startedOnce == false and active = true is not possible 
+		}
     }
 
     /** Stops the storage server.
@@ -88,7 +177,13 @@ public class StorageServer implements Storage, Command
      */
     public void stop()
     {
-        throw new UnsupportedOperationException("not implemented");
+    	if(active) {
+			storageSkeleton.stop();
+			commandSkeleton.stop();
+			active = false;
+		}
+		
+		stopped(null);
     }
 
     /** Called when the storage server has shut down.
