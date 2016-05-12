@@ -40,8 +40,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
 
         @param path The existing path.
         @param component The new component.
-        @throws IllegalArgumentException("
-        If <code>component</code> includes the
+        @throws IllegalArgumentException If <code>component</code> includes the
                                          separator, a colon, or
                                          <code>component</code> is the empty
                                          string.
@@ -116,6 +115,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     	this.pathComponents = components;
     }
 
+    public Path(Path path) {
+        if (path == null) {
+            throw new IllegalArgumentException("The exting Path is null");
+        }
+        this.pathComponents = new ArrayList<>();
+        this.pathComponents.addAll((Collection<String>)path.pathComponents);
+    }
+
     /** Returns an iterator over the components of the path.
 
         <p>
@@ -174,36 +181,34 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
       }
 
       ArrayList<Path> paths = new ArrayList<Path>();
-    	ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
-    	Path[] files = new Path[0];
-    	return resultPaths.toArray(files);
-
+      ArrayList<Path> resultPaths = listRec(new Path(), directory, paths);
+      Path[] files = new Path[0];
+      return resultPaths.toArray(files);
     }
 
     /** Helper routine to list files in a directory recursively
      */
     public static ArrayList<Path> listRec(Path p, File directory,
-          	ArrayList<Path> paths) throws FileNotFoundException {
+        ArrayList<Path> paths) throws FileNotFoundException {
 
-          	if (!directory.exists()) {
-          		throw new FileNotFoundException("Directory doesn't exist");
-          	}
-            if(!directory.isDirectory()) {
-              throw new IllegalArgumentException("Directory exists but does not"
+        if (!directory.exists()) {
+          	throw new FileNotFoundException("Directory doesn't exist");
+        }
+        if(!directory.isDirectory()) {
+            throw new IllegalArgumentException("Directory exists but does not"
                      + "refer to a directory");
-            }
+        }
 
-          	File[] files = directory.listFiles();
-          	for (File f : files) {
-          		if (f.isFile()) {
-          			paths.add(new Path(p, f.getName()));
-          		}
-          		else if (f.isDirectory()) {
-          			listRec(new Path (p, f.getName()), f, paths);
-          		}
+        File[] files = directory.listFiles();
+        for (File f : files) {
+          	if (f.isFile()) {
+          		paths.add(new Path(p, f.getName()));
+          	} else if (f.isDirectory()) {
+          		listRec(new Path (p, f.getName()), f, paths);
           	}
+         }
 
-          	return paths;
+        return paths;
     }
 
     /** Determines whether the path represents the root directory.
@@ -261,8 +266,27 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public boolean isSubpath(Path other)
     {
+        if (other.pathComponents.size() > this.pathComponents.size()){
+            return false;
+        }
+        for (int i=0; i<other.pathComponents.size(); i++){
+            if (!other.pathComponents.get(i).equals(this.pathComponents.get(i))){
+                return false;
+            }
+        }
+        return true;
+    }
 
-        throw new UnsupportedOperationException("not implemented");
+    public void removeLastComponent(){
+        if (!pathComponents.isEmpty()){
+            pathComponents.remove(pathComponents.size()-1);
+        }
+    }
+
+    public Path getPathWithoutLastComponent(){
+        Path parent = new Path(this);
+        parent.removeLastComponent();
+        return parent;
     }
 
     /** Converts the path to <code>File</code> object.
@@ -273,7 +297,8 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
      */
     public File toFile(File root)
     {
-        throw new UnsupportedOperationException("not implemented");
+        String fullPath = root.getPath() + this.toString();
+        return new File(fullPath);
     }
 
     /** Compares this path to another.
@@ -315,7 +340,7 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public int compareTo(Path other)
     {
-        throw new UnsupportedOperationException("not implemented");
+        return this.toString().compareTo(other.toString());
     }
 
     /** Compares two paths for equality.
@@ -329,14 +354,17 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public boolean equals(Object other)
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (!other.getClass().equals(Path.class)){
+            return false;
+        }
+        return compareTo((Path)other) == 0;
     }
 
     /** Returns the hash code of the path. */
     @Override
     public int hashCode()
     {
-        throw new UnsupportedOperationException("not implemented");
+        return toString().hashCode();
     }
 
     /** Converts the path to a string.
@@ -350,6 +378,14 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
     @Override
     public String toString()
     {
-        throw new UnsupportedOperationException("not implemented");
+        if (pathComponents.isEmpty()){
+            return "/";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String component: pathComponents){
+            builder.append("/");
+            builder.append(component);
+        }
+        return builder.toString();
     }
 }
