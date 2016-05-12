@@ -111,18 +111,49 @@ public class NamingServer implements Service, Registration
 
     // The following public methods are documented in Service.java.
     @Override
-    public void lock(Path path, boolean exclusive) throws FileNotFoundException
+    public synchronized void lock(Path path, boolean exclusive) throws FileNotFoundException
     {
-        throw new UnsupportedOperationException("not implemented");
+        DfsLock mainLock = new DfsLock(path, exclusive);
+        TreeNode node = tryGetNodeFor(path);
+        node.addLock(mainLock);
+
+        node = node.parent;
+        while(node != null){
+            node.addLock(new DfsLock(path, false));
+            node = node.parent;
+        }
+
+        try {
+            mainLock.waitLock();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public void unlock(Path path, boolean exclusive)
+    public synchronized void unlock(Path path, boolean exclusive)
     {
-        throw new UnsupportedOperationException("not implemented");
+        TreeNode last = null;
+        try {
+            last = tryGetNodeFor(path);
+        } catch (FileNotFoundException e) {
+            throw new IllegalArgumentException(e.toString());
+        }
+
+
+        TreeNode node = last.parent;
+        while(node != null){
+            node.removeLock(path);
+            node = node.parent;
+        }
+
+        node.removeLock(path);
     }
 
     protected TreeNode getNode(Path path){
+        if (path == null){
+            return null;
+        }
         TreeNode current = filesystem;
         if (path.isRoot()){
             return filesystem;
@@ -137,6 +168,14 @@ public class NamingServer implements Service, Registration
             }
         }
         return current;
+    }
+
+    private TreeNode tryGetNodeFor(Path path) throws FileNotFoundException {
+        TreeNode node = getNode(path);
+        if (node == null){
+            throw new FileNotFoundException("Path doesn't exist: " + path.toString());
+        }
+        return node;
     }
 
     @Override
