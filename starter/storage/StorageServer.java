@@ -5,6 +5,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Random;
 
 import common.*;
 import rmi.*;
@@ -84,8 +85,9 @@ public class StorageServer implements Storage, Command {
 		}
 
 		this.root = root;
-		this.clientPort = 4000;
-		this.commandPort = 4001;
+		Random random = new Random(System.currentTimeMillis());
+		this.clientPort = random.nextInt(65534) + 1;
+		this.commandPort = clientPort + 2;
 		this.hostname = null;
 		this.commandSkeleton = null;
 		this.storageSkeleton = null;
