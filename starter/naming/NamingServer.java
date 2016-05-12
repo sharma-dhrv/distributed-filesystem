@@ -1,6 +1,7 @@
 package naming;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.*;
 import java.util.*;
 
@@ -171,6 +172,9 @@ public class NamingServer implements Service, Registration
     }
 
     private TreeNode tryGetNodeFor(Path path) throws FileNotFoundException {
+        if (path == null) {
+            throw new NullPointerException("Path passed is null");
+        }
         TreeNode node = getNode(path);
         if (node == null){
             throw new FileNotFoundException("Path doesn't exist: " + path.toString());
@@ -181,14 +185,17 @@ public class NamingServer implements Service, Registration
     @Override
     public boolean isDirectory(Path path) throws FileNotFoundException
     {
-        TreeNode node = getNode(path);
+        TreeNode node = tryGetNodeFor(path);
         return node.nodeType == TreeNode.NodeType.DIRECTORY;
     }
 
     @Override
     public String[] list(Path directory) throws FileNotFoundException
     {
-        TreeNode node = getNode(directory);
+        TreeNode node = tryGetNodeFor(directory);
+        if (node.nodeType == TreeNode.NodeType.FILE) {
+            throw new FileNotFoundException("Can`t call list() on a file");
+        }
 
         return node.children.keySet().toArray(new String[node.children.size()]);
     }

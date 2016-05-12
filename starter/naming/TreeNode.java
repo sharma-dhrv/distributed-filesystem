@@ -29,7 +29,9 @@ public class TreeNode {
     public LinkedList<DfsLock> pendingLocks = new LinkedList<>();
 
 
-    public TreeNode(){}
+    public TreeNode(){
+        this.nodeType = NodeType.DIRECTORY;
+    }
 
     public TreeNode(TreeNode parent){
         this.parent = parent;
