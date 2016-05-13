@@ -276,6 +276,13 @@ public class Path implements Iterable<String>, Comparable<Path>, Serializable
         return true;
     }
 
+    public String getNextComponentOf(Path longerPath){
+        if (longerPath.isSubpath(this)){
+            return longerPath.pathComponents.get(this.pathComponents.size());
+        }
+        return null;
+    }
+
     public void removeLastComponent(){
         if (!pathComponents.isEmpty()){
             pathComponents.remove(pathComponents.size()-1);
