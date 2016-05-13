@@ -6,7 +6,7 @@ import common.Path;
  * Created by Sreejith Unnikrishnan on 5/11/16.
  */
 public class DfsUtils {
-    private static boolean isDebugEnabled = false;
+    private static boolean isDebugEnabled = true;
 
     public static void safePrintln(String s){
         if (isDebugEnabled){

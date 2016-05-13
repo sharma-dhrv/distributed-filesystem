@@ -117,16 +117,16 @@ public class NamingServer implements Service, Registration
     @Override
     public void lock(Path path, boolean exclusive) throws FileNotFoundException
     {
-        DfsUtils.safePrintln("Attempt to lock, exclusive: "+exclusive+ " " +path.toString());
+        //DfsUtils.safePrintln("Attempt to lock, exclusive: "+exclusive+ " " +path.toString());
         DfsLock mainLock = propagateLock(path, exclusive);
 
-        DfsUtils.safePrintln("Waiting for lock for "+path.toString());
+        //DfsUtils.safePrintln("Waiting for lock for "+path.toString());
         try {
             mainLock.waitLock();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        DfsUtils.safePrintln("Lock acuired for "+path.toString());
+        //DfsUtils.safePrintln("Lock acuired for "+path.toString());
     }
 
     private synchronized DfsLock propagateLock(Path path, boolean exclusive) throws FileNotFoundException {
@@ -180,7 +180,7 @@ public class NamingServer implements Service, Registration
             current = current.getChild(component);
             current.removeLock(lockId);
         }
-        DfsUtils.safePrintln("Lock released, exclusive: "+exclusive+ " " +path.toString());
+        //DfsUtils.safePrintln("Lock released, exclusive: "+exclusive+ " " +path.toString());
     }
 
     protected TreeNode getNode(Path path){
