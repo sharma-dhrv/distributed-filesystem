@@ -175,6 +175,7 @@ public class NamingServer implements Service, Registration
         }
 
         TreeNode current = filesystem;
+        current.removeLock(lockId);
         for (String component: path){
             current = current.getChild(component);
             current.removeLock(lockId);

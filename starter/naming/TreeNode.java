@@ -84,20 +84,7 @@ public class TreeNode {
     }
 
     public void addLock(DfsLock dfsLock) {
-        if (dfsLock.lockedPath.equals(getPathToCurrent())){
-            pendingLocks.add(dfsLock);
-        } else {
-            DfsLock readLock;
-            if (!dfsLock.isExclusive){
-                readLock = new DfsLock(dfsLock);
-                //pendingLocks.add(readLock);
-                pendingLocks.add(dfsLock);
-            } else {
-                //readLock = new DfsLock(dfsLock.id, dfsLock.lockedPath, false);
-                //pendingLocks.add(readLock);
-                pendingLocks.add(dfsLock);
-            }
-        }
+        pendingLocks.add(dfsLock);
         checkPendingQueue();
     }
 
@@ -105,6 +92,8 @@ public class TreeNode {
         for (DfsLock dfsLock: currentLocks){
             if (dfsLock.id.equals(lockId)){
                 currentLocks.remove(dfsLock);
+                DfsUtils.safePrintln("Removed lock: " + dfsLock.isExclusive+ " " + dfsLock.lockedPath);
+                DfsUtils.safePrintln("Current locks: "+currentLocks.size());
                 checkPendingQueue();
                 return;
             }
@@ -162,41 +151,6 @@ public class TreeNode {
             }
         }
     }
-
-//    private void checkPendingQueue() {
-//        while (true){
-//            DfsLock dfsLock = pendingLocks.peek();
-//            if (dfsLock == null){
-//                break;
-//            }
-//            DfsUtils.safePrintln("Dfs path "+dfsLock.lockedPath+" current path "+getPathToCurrent().toString());
-//            if (!dfsLock.isExclusive || dfsLock.lockedPath.equals(getPathToCurrent())){
-//                DfsUtils.safePrintln("First branch : if");
-//                // R lock for any node or W lock for current node
-//                boolean canMoveRW = currentLocks.isEmpty();
-//                boolean canMoveR = currentLocks.isEmpty() ? true : !currentLocks.peek().isExclusive && !dfsLock.isExclusive;
-//                if (canMoveRW || canMoveR){
-//                    if (dfsLock.lockedPath.equals(getPathToCurrent())){
-//                        pendingLocks.pollFirst();
-//                        currentLocks.add(dfsLock);
-//                        checkNotifySender(dfsLock);
-//                    } else {
-//                        DfsLock copyLock = new DfsLock(dfsLock);
-//                        currentLocks.add(copyLock);
-//                        propagateLock(dfsLock);
-//                    }
-//                } else {
-//                    break;
-//                }
-//            } else {
-//                DfsUtils.safePrintln("Inside the second branch : else");
-//                // need to move W lock for different path down to child
-//                // TODO: check if the child exist and not deleted
-//                propagateLock(dfsLock);
-//            }
-//
-//        }
-//    }
 
     private void propagateLock(DfsLock dfsLock){
         Path currentPath = getPathToCurrent();
