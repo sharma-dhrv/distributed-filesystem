@@ -1,11 +1,11 @@
 package naming;
 
+import common.DfsUtils;
 import common.Path;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by Sreejith Unnikrishnan on 5/9/16.
@@ -22,6 +22,7 @@ public class TreeNode {
 
     // Metadata
     public int numAccesses;
+    public int readCounter;
     public ArrayList<StorageInfo> storages = new ArrayList<>();
 
     // Locks
@@ -61,15 +62,39 @@ public class TreeNode {
         return child;
     }
 
+    public void removeChild(TreeNode node) {
+        this.children.remove(node.nodeName);
+    }
+
+    public boolean canLockProceed() {
+        if (currentLocks.isEmpty()) {
+            return true;
+        }
+        // some locks are in currentLocks
+        if (currentLocks.peek().isExclusive) { //
+            return false;
+        }
+        // some read locks in currentLocks
+        if (pendingLocks.isEmpty()){
+            // some read locks in currentLocks and no locks in pendingLocks
+            return true;
+        } else {
+            // some read locks in currentLocks and write locks in pendingLocks
+            return false;
+        }
+    }
+
     public void addLock(DfsLock dfsLock) {
         pendingLocks.add(dfsLock);
         checkPendingQueue();
     }
 
-    public void removeLock(Path path) {
+    public void removeLock(String lockId) {
         for (DfsLock dfsLock: currentLocks){
-            if (dfsLock.lockedPath.equals(path)){
+            if (dfsLock.id.equals(lockId)){
                 currentLocks.remove(dfsLock);
+                //DfsUtils.safePrintln("Removed lock: " + dfsLock.isExclusive+ " " + dfsLock.lockedPath);
+                //DfsUtils.safePrintln("Current locks: "+currentLocks.size());
                 checkPendingQueue();
                 return;
             }
@@ -77,17 +102,71 @@ public class TreeNode {
         // TODO: do we need to check locks in pendingLocks? Maybe released lock hasn't been even aquired
     }
 
+    public String getLockIdForRelease(Path path, boolean exclusive) {
+        if (currentLocks.size() > 1){
+            // currentLocks contain multiple read locks, let's find the one for curent path
+            for (DfsLock dfsLock: currentLocks){
+                if (dfsLock.lockedPath.equals(path) && dfsLock.isExclusive == exclusive){
+                    return dfsLock.id;
+                }
+            }
+            return null;
+        } else if (currentLocks.size() > 0 && currentLocks.peek().isExclusive == exclusive &&
+                currentLocks.peek().lockedPath.equals(path)) {
+            // only one lock, R or W, in the current locks available for release
+            return currentLocks.peek().id;
+        }
+        return null;
+    }
+
+
     private void checkPendingQueue() {
-        DfsLock dfsLock = pendingLocks.peek();
-        if (dfsLock != null){
-            boolean canMoveRW = currentLocks.isEmpty();
-            boolean canMoveR = currentLocks.isEmpty() && !currentLocks.peek().isExclusive && !dfsLock.isExclusive;
-            if (canMoveRW || canMoveR){
-                pendingLocks.pollFirst();
-                currentLocks.add(dfsLock);
-                checkNotifySender(dfsLock);
+        while (true){
+            DfsLock dfsLock = pendingLocks.peek();
+            if (dfsLock == null){
+                break;
+            }
+            //DfsUtils.safePrintln("Dfs path "+dfsLock.lockedPath+" current path "+getPathToCurrent().toString());
+            boolean canMoveR = currentLocks.isEmpty() ? true : !currentLocks.peek().isExclusive;
+            if (canMoveR){
+                if (dfsLock.lockedPath.equals(getPathToCurrent())){
+                    //DfsUtils.safePrintln("First branch : if");
+                    // R lock for any node or W lock for current node
+                    boolean canMoveRW = currentLocks.isEmpty();
+                    if (!dfsLock.isExclusive || canMoveRW){
+                        pendingLocks.pollFirst();
+                        currentLocks.add(dfsLock);
+                        if(!dfsLock.isExclusive) {
+                        	readCounter++;
+                        }
+                        checkNotifySender(dfsLock);
+                    } else {
+                        break;
+                    }
+                } else {
+                    //DfsUtils.safePrintln("Inside the second branch : else");
+                    // need to move lock for different path down to child
+                    // TODO: check if the child exist and not deleted
+                    DfsLock copyLock = new DfsLock(dfsLock.id, dfsLock.lockedPath, false);
+                    currentLocks.add(copyLock);
+                    if(!copyLock.isExclusive) {
+                    	readCounter++;
+                    }
+                    propagateLock(dfsLock);
+                }
+            } else {
+                break;
             }
         }
+    }
+
+    private void propagateLock(DfsLock dfsLock){
+        Path currentPath = getPathToCurrent();
+        String component = currentPath.getNextComponentOf(dfsLock.lockedPath);
+        //DfsUtils.safePrintln("Next component: "+component);
+        TreeNode child = getChild(component);
+        pendingLocks.pollFirst();
+        child.addLock(dfsLock);
     }
 
     private void checkNotifySender(DfsLock dfsLock) {
@@ -97,7 +176,7 @@ public class TreeNode {
         }
     }
 
-    private Path getPathToCurrent() {
+    public Path getPathToCurrent() {
 
         StringBuilder path = new StringBuilder();
         TreeNode current = this;
@@ -105,10 +184,18 @@ public class TreeNode {
             return new Path();
         }
         while (current.parent != null){
-            path.insert(0, "/"+nodeName);
+            path.insert(0, "/"+current.nodeName);
             current = current.parent;
         }
         return new Path(path.toString());
+    }
+
+    public TreeNode getRoot(){
+        TreeNode current = this;
+        while (current.parent != null){
+            current = current.parent;
+        }
+        return current;
     }
 
 }

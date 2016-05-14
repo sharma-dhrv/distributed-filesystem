@@ -18,7 +18,7 @@ public class StorageInfo {
 
     public StorageInfo(Command command){
         commandStub = command;
-        paths = new ArrayList<TreeNode>();
+        paths = new ArrayList<>();
     }
 
     public StorageInfo(Storage client, Command command){
