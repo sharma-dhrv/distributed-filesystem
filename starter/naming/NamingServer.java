@@ -5,6 +5,8 @@ import java.net.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import common.DfsUtils;
 import rmi.*;
@@ -42,7 +44,9 @@ public class NamingServer implements Service, Registration
     private Skeleton<Service> serviceSkeleton;
     private boolean wasStartAttempted = false;
     private Random random = new Random();
-    private DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss:SSSZ");;
+    private DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss:SSSZ");
+    
+    private ExecutorService replicationThreadPool = Executors.newCachedThreadPool();
 
     /** Creates the naming server object.
 
@@ -96,6 +100,7 @@ public class NamingServer implements Service, Registration
             registrationSkeleton.stop();
             serviceSkeleton.stop();
             // TODO: interrupt as many of the threads that are executing naming server code as possible
+            replicationThreadPool.shutdown();
         }
         stopped(null);
     }
@@ -287,10 +292,14 @@ public class NamingServer implements Service, Registration
         }
         return false;
     }
+    
+    private synchronized int generateRandomInt(int uppperBound) {
+    	return random.nextInt(uppperBound);
+    }
 
-    private synchronized StorageInfo chooseStorage() {
+    private StorageInfo chooseStorage() {
         // TODO: CHECK IF StorageInfo IS PASSED AROUND AS REFERENCE AND NOT COPY
-        int choice = random.nextInt(availableStorages.size());
+        int choice = generateRandomInt(availableStorages.size());
         return (StorageInfo) availableStorages.toArray()[choice];
     }
 
@@ -333,8 +342,29 @@ public class NamingServer implements Service, Registration
         if (node.nodeType == TreeNode.NodeType.DIRECTORY){
             throw new FileNotFoundException("Expected path to file, found directory along the path " + file.toString());
         }
+        
         // TODO: ping the Storage Server before giving it to client. Maybe it's dead and file isn't available
-        return node.storages.get(0).clientStub;
+        
+        StorageInfo chosenStorageInfo = node.storages.get(generateRandomInt(node.storages.size()));
+        if(node.currentLocks.size() > 0) {
+        	boolean isExclusiveLock = node.currentLocks.get(0).isExclusive;
+        	boolean replicaManagementRequired = false;
+        	if(!isExclusiveLock) {
+        		if(node.readCounter >= 20) {
+	        		node.readCounter = 0;
+	        		replicaManagementRequired = true;
+        		}
+        	} else {
+        		replicaManagementRequired = true;
+        	}
+        		
+        	Runnable task = new ReplicaManagementTask(this, file, node, chosenStorageInfo, !isExclusiveLock);
+        	replicationThreadPool.execute(task);
+        } else {
+        	// TODO: not sure if to throw an exception or to return null 
+        }
+        
+        return chosenStorageInfo.clientStub;
     }
 
     // The method register is documented in Registration.java.

@@ -22,6 +22,7 @@ public class TreeNode {
 
     // Metadata
     public int numAccesses;
+    public int readCounter;
     public ArrayList<StorageInfo> storages = new ArrayList<>();
 
     // Locks
@@ -135,6 +136,9 @@ public class TreeNode {
                     if (!dfsLock.isExclusive || canMoveRW){
                         pendingLocks.pollFirst();
                         currentLocks.add(dfsLock);
+                        if(!dfsLock.isExclusive) {
+                        	readCounter++;
+                        }
                         checkNotifySender(dfsLock);
                     } else {
                         break;
@@ -145,6 +149,9 @@ public class TreeNode {
                     // TODO: check if the child exist and not deleted
                     DfsLock copyLock = new DfsLock(dfsLock.id, dfsLock.lockedPath, false);
                     currentLocks.add(copyLock);
+                    if(!copyLock.isExclusive) {
+                    	readCounter++;
+                    }
                     propagateLock(dfsLock);
                 }
             } else {
