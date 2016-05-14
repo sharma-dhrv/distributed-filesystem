@@ -129,6 +129,8 @@ public class NamingServer implements Service, Registration
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+	
     }
 
     @Override
