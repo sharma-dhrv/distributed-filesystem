@@ -1,8 +1,9 @@
 package naming;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.net.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import common.DfsUtils;
@@ -41,13 +42,15 @@ public class NamingServer implements Service, Registration
     private Skeleton<Service> serviceSkeleton;
     private boolean wasStartAttempted = false;
     private Random random = new Random();
+    private DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss:SSSZ");;
 
     /** Creates the naming server object.
 
         <p>
         The naming server is not started.
      */
-    public NamingServer() { }
+    public NamingServer() {
+    }
 
     /** Starts the naming server.
 
@@ -112,43 +115,72 @@ public class NamingServer implements Service, Registration
 
     // The following public methods are documented in Service.java.
     @Override
-    public synchronized void lock(Path path, boolean exclusive) throws FileNotFoundException
+    public void lock(Path path, boolean exclusive) throws FileNotFoundException
     {
-        DfsLock mainLock = new DfsLock(path, exclusive);
-        TreeNode node = tryGetNodeFor(path);
-        node.addLock(mainLock);
+        //DfsUtils.safePrintln("Attempt to lock, exclusive: "+exclusive+ " " +path.toString());
+        DfsLock mainLock = propagateLock(path, exclusive);
 
-        node = node.parent;
-        while(node != null){
-            node.addLock(new DfsLock(path, false));
-            node = node.parent;
-        }
-
+        //DfsUtils.safePrintln("Waiting for lock for "+path.toString());
         try {
             mainLock.waitLock();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        //DfsUtils.safePrintln("Lock acuired for "+path.toString());
+    }
+
+    private synchronized DfsLock propagateLock(Path path, boolean exclusive) throws FileNotFoundException {
+        // TODO: check if path.isRoot
+        TreeNode last = tryGetNodeFor(path);
+        String lockId = createLockId();
+        DfsLock mainLock = new DfsLock(lockId, path, exclusive);
+
+//        boolean reachedEndOfPath = true;
+//        TreeNode current = filesystem;
+        filesystem.addLock(mainLock);
+//        for (String component: path.getPathWithoutLastComponent()){
+//            current = filesystem.getChild(component);
+//            if (current.canLockProceed()){
+//                current.addLock(new DfsLock(lockId, path, false));
+//            } else {
+//                current.addLock(new DfsLock(lockId, path, exclusive));
+//                reachedEndOfPath = false;
+//                break;
+//            }
+//        }
+//
+//        if (reachedEndOfPath){
+//            last.addLock(mainLock);
+//        }
+        return mainLock;
+    }
+
+    private String createLockId() {
+        String nowAsISO = df.format(new Date());
+        return nowAsISO;
     }
 
     @Override
     public synchronized void unlock(Path path, boolean exclusive)
     {
-        TreeNode last = null;
+        TreeNode last;
         try {
             last = tryGetNodeFor(path);
         } catch (FileNotFoundException e) {
             throw new IllegalArgumentException(e.toString());
         }
-
-
-        TreeNode node = last.parent;
-        while(node != null){
-            node.removeLock(path);
-            node = node.parent;
+        String lockId = last.getLockIdForRelease(path, exclusive);
+        if (lockId == null){
+            throw new IllegalArgumentException("Lock didn't find");
         }
 
-        node.removeLock(path);
+        TreeNode current = filesystem;
+        current.removeLock(lockId);
+        for (String component: path){
+            current = current.getChild(component);
+            current.removeLock(lockId);
+        }
+        //DfsUtils.safePrintln("Lock released, exclusive: "+exclusive+ " " +path.toString());
     }
 
     protected TreeNode getNode(Path path){
@@ -276,9 +308,16 @@ public class NamingServer implements Service, Registration
     }
 
     @Override
-    public boolean delete(Path path) throws FileNotFoundException
-    {
-        throw new UnsupportedOperationException("not implemented");
+    public boolean delete(Path path) throws FileNotFoundException, RMIException {
+        if (isValidCreationPath(path)) {
+            TreeNode node = tryGetNodeFor(path);
+            for (StorageInfo info : node.storages) {
+                info.commandStub.delete(path);
+            }
+            node.parent.removeChild(node);
+            return true;
+        }
+        return false;
     }
 
     @Override
