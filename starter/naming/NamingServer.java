@@ -232,10 +232,6 @@ public class NamingServer implements Service, Registration
             }
         }
         
-//        if(current.markedForDeletion) {
-//        	return null;
-//        }
-        
         return current;
     }
 
@@ -351,14 +347,17 @@ public class NamingServer implements Service, Registration
     public boolean delete(Path path) throws FileNotFoundException, RMIException {
         if (isValidCreationPath(path)) {
             TreeNode node = tryGetNodeFor(path);
+//            System.out.println(node.storages.size() + " storage servers contain " + path);
             for (StorageInfo info : node.storages) {
+//            	System.out.println("Deleting " + path + " from " + info.commandStub);
                 info.commandStub.delete(path);
-//                info.paths.remove(node);
+                
             }
-//            node.markedForDeletion = true;
             node.parent.removeChild(node);
+//            System.out.println("Delete finish");
             return true;
         }
+        
         return false;
     }
 

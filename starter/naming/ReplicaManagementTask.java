@@ -104,16 +104,6 @@ public class ReplicaManagementTask implements Runnable {
 				}
             }
             
-//            try {
-//				if (node.markedForDeletion) {
-//					src.commandStub.delete(file);
-//					node.storages.remove(src);
-//					src.paths.remove(node);
-//				}
-//            } catch (Exception e) {
-//				System.err.println("[ERROR] Failed during invalidation of replicas");
-//				e.printStackTrace();
-//			}
 		}
 		
 		TreeNode current = namingServer.filesystem;
