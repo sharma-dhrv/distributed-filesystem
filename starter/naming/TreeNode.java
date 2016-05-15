@@ -54,7 +54,10 @@ public class TreeNode {
     }
 
     public void addStorage(StorageInfo storage){
-        storages.add(storage);
+        if (!storages.contains(storage)){
+            storages.add(storage);
+        }
+
     }
 
     public TreeNode addChild(TreeNode child) {
