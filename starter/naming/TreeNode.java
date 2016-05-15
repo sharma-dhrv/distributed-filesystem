@@ -23,6 +23,7 @@ public class TreeNode {
     // Metadata
     public int numAccesses;
     public int readCounter;
+//    public boolean markedForDeletion = false;
     public ArrayList<StorageInfo> storages = new ArrayList<>();
 
     // Locks
@@ -87,6 +88,19 @@ public class TreeNode {
     public void addLock(DfsLock dfsLock) {
         pendingLocks.add(dfsLock);
         checkPendingQueue();
+//        System.out.println(nodeName);
+//        System.out.print("Pending: ");
+//        for(DfsLock lock: pendingLocks) {
+//        	System.out.print(lock.lockedPath + ":" + lock.isExclusive + ":" + lock.isInternal + ", ");
+//        }
+//        System.out.println();
+//        
+//        System.out.print("Current: ");
+//        for(DfsLock lock: pendingLocks) {
+//        	System.out.print(lock.lockedPath + ":" + lock.isExclusive + ":" + lock.isInternal + ", ");
+//        }
+//        System.out.println();
+//        System.out.println();
     }
 
     public void removeLock(String lockId) {
@@ -118,6 +132,22 @@ public class TreeNode {
         }
         return null;
     }
+    
+    public DfsLock getInternalLock(Path path, boolean exclusive) {
+    	for (DfsLock dfsLock: currentLocks){
+    		if (dfsLock.lockedPath.equals(path) && dfsLock.isExclusive == exclusive && dfsLock.isInternal == true){
+                return dfsLock;
+            }
+        }
+    	
+    	for (DfsLock dfsLock: pendingLocks){
+    		if (dfsLock.lockedPath.equals(path) && dfsLock.isExclusive == exclusive && dfsLock.isInternal == true){
+                return dfsLock;
+            }
+        }
+    	
+    	return null;
+    }
 
 
     private void checkPendingQueue() {
@@ -136,9 +166,9 @@ public class TreeNode {
                     if (!dfsLock.isExclusive || canMoveRW){
                         pendingLocks.pollFirst();
                         currentLocks.add(dfsLock);
-                        if(!dfsLock.isExclusive) {
-                        	readCounter++;
-                        }
+//                        if(!dfsLock.isExclusive) {
+//                        	readCounter++;
+//                        }
                         checkNotifySender(dfsLock);
                     } else {
                         break;
@@ -147,11 +177,11 @@ public class TreeNode {
                     //DfsUtils.safePrintln("Inside the second branch : else");
                     // need to move lock for different path down to child
                     // TODO: check if the child exist and not deleted
-                    DfsLock copyLock = new DfsLock(dfsLock.id, dfsLock.lockedPath, false);
+                    DfsLock copyLock = new DfsLock(dfsLock.id, dfsLock.lockedPath, false, dfsLock.isInternal);
                     currentLocks.add(copyLock);
-                    if(!copyLock.isExclusive) {
-                    	readCounter++;
-                    }
+//                    if(!copyLock.isExclusive) {
+//                    	readCounter++;
+//                    }
                     propagateLock(dfsLock);
                 }
             } else {

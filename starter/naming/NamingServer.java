@@ -38,8 +38,8 @@ import storage.*;
  */
 public class NamingServer implements Service, Registration
 {
-    TreeNode filesystem = new TreeNode();
-    private HashSet<StorageInfo> availableStorages = new HashSet<>();
+    protected TreeNode filesystem = new TreeNode();
+    protected HashSet<StorageInfo> availableStorages = new HashSet<>();
     private Skeleton<Registration> registrationSkeleton;
     private Skeleton<Service> serviceSkeleton;
     private boolean wasStartAttempted = false;
@@ -122,12 +122,15 @@ public class NamingServer implements Service, Registration
     @Override
     public void lock(Path path, boolean exclusive) throws FileNotFoundException
     {
+//    	System.out.println("Requesting for : " + path + ":" + exclusive);
         //DfsUtils.safePrintln("Attempt to lock, exclusive: "+exclusive+ " " +path.toString());
         DfsLock mainLock = propagateLock(path, exclusive);
 
         //DfsUtils.safePrintln("Waiting for lock for "+path.toString());
         try {
+//        	System.out.println("waiting for : " + mainLock.lockedPath + ":" + mainLock.isExclusive);
             mainLock.waitLock();
+//            System.out.println("Got lock on : " + mainLock.lockedPath + ":" + mainLock.isExclusive);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -138,7 +141,7 @@ public class NamingServer implements Service, Registration
         // TODO: check if path.isRoot
         TreeNode last = tryGetNodeFor(path);
         String lockId = createLockId();
-        DfsLock mainLock = new DfsLock(lockId, path, exclusive);
+        DfsLock mainLock = new DfsLock(lockId, path, exclusive, false);
 
 //        boolean reachedEndOfPath = true;
 //        TreeNode current = filesystem;
@@ -157,12 +160,35 @@ public class NamingServer implements Service, Registration
 //        if (reachedEndOfPath){
 //            last.addLock(mainLock);
 //        }
+        
+        if(last.nodeType == TreeNode.NodeType.FILE) {
+	        boolean replicaManagementRequired = false;
+	        if(!exclusive) {
+	        	last.readCounter++;
+	        	if(last.readCounter >= 20) {
+	        		last.readCounter = last.readCounter % 20;
+	        		replicaManagementRequired = true;
+	        	}
+	        } else {
+	        	replicaManagementRequired = true;
+	        }
+	        
+	        if(replicaManagementRequired) {
+		        DfsLock replicationLock = new DfsLock(createLockId(), path, exclusive, true);
+		        filesystem.addLock(replicationLock);
+		        
+	        	Runnable task = new ReplicaManagementTask(this, path, last, !exclusive);
+	        	replicationThreadPool.execute(task);
+	        }
+        }
+        
         return mainLock;
     }
 
     private String createLockId() {
-        String nowAsISO = df.format(new Date());
-        return nowAsISO;
+//        String nowAsISO = df.format(new Date());
+//        return nowAsISO;
+    	return UUID.randomUUID().toString();
     }
 
     @Override
@@ -205,6 +231,11 @@ public class NamingServer implements Service, Registration
                 return null;
             }
         }
+        
+//        if(current.markedForDeletion) {
+//        	return null;
+//        }
+        
         return current;
     }
 
@@ -322,7 +353,9 @@ public class NamingServer implements Service, Registration
             TreeNode node = tryGetNodeFor(path);
             for (StorageInfo info : node.storages) {
                 info.commandStub.delete(path);
+//                info.paths.remove(node);
             }
+//            node.markedForDeletion = true;
             node.parent.removeChild(node);
             return true;
         }
@@ -346,23 +379,14 @@ public class NamingServer implements Service, Registration
         // TODO: ping the Storage Server before giving it to client. Maybe it's dead and file isn't available
         
         StorageInfo chosenStorageInfo = node.storages.get(generateRandomInt(node.storages.size()));
-        if(node.currentLocks.size() > 0) {
-        	boolean isExclusiveLock = node.currentLocks.get(0).isExclusive;
-        	boolean replicaManagementRequired = false;
-        	if(!isExclusiveLock) {
-        		if(node.readCounter >= 20) {
-	        		node.readCounter = 0;
-	        		replicaManagementRequired = true;
-        		}
-        	} else {
-        		replicaManagementRequired = true;
-        	}
-        		
-        	Runnable task = new ReplicaManagementTask(this, file, node, chosenStorageInfo, !isExclusiveLock);
-        	replicationThreadPool.execute(task);
-        } else {
-        	// TODO: not sure if to throw an exception or to return null 
-        }
+        
+
+    	//boolean isExclusiveLock = node.currentLocks.get(0).isExclusive;
+//    	if(!isExclusiveLock) {
+//    		chosenStorageInfo = node.storages.get(generateRandomInt(node.storages.size()));
+//    	} else {
+    		chosenStorageInfo = node.storages.get(0);
+//    	}        
         
         return chosenStorageInfo.clientStub;
     }

@@ -11,12 +11,14 @@ public class DfsLock {
     public String id;
     public Path lockedPath;
     public boolean isExclusive;
+    public boolean isInternal;
     public CountDownLatch notification;
 
-    public DfsLock(String id, Path path, boolean exclusive) {
+    public DfsLock(String id, Path path, boolean exclusive, boolean internal) {
         this.id = id;
         lockedPath = path;
         isExclusive = exclusive;
+        isInternal = internal;
         notification = new CountDownLatch(1);
     }
 
@@ -24,6 +26,7 @@ public class DfsLock {
         id = dfsLock.id;
         lockedPath = dfsLock.lockedPath;
         isExclusive = dfsLock.isExclusive;
+        isInternal = dfsLock.isInternal;
         notification = new CountDownLatch(1);
     }
 
