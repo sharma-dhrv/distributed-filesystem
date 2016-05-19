@@ -314,18 +314,17 @@ public class NamingServer implements Service, Registration
         if (result){
             TreeNode newNode = parent.addChild(new TreeNode(parent,file.last(), TreeNode.NodeType.FILE));
             storage.addFile(newNode);
-            newNode.storages.add(storage);
+            addStorageToPath(storage, newNode);
             return true;
         }
         return false;
     }
-    
+
     private synchronized int generateRandomInt(int uppperBound) {
     	return random.nextInt(uppperBound);
     }
 
     private StorageInfo chooseStorage() {
-        // TODO: CHECK IF StorageInfo IS PASSED AROUND AS REFERENCE AND NOT COPY
         int choice = generateRandomInt(availableStorages.size());
         return (StorageInfo) availableStorages.toArray()[choice];
     }
@@ -358,6 +357,7 @@ public class NamingServer implements Service, Registration
     public boolean delete(Path path) throws FileNotFoundException, RMIException {
         if (isValidCreationPath(path)) {
             TreeNode node = tryGetNodeFor(path);
+
             boolean result = true;
             if(node.nodeType == TreeNode.NodeType.DIRECTORY) {
             	for(StorageInfo info : availableStorages) {
@@ -451,10 +451,19 @@ public class NamingServer implements Service, Registration
                     node.addStorage(storage);
                     storage.addFile(node);
                 }
+                addStorageToPath(storage, node);
             }
         }
         // TODO: maybe call command_stub.delete(path) for each path in duplicatePaths (to delete physical files synchronously)
         return duplicatePaths.toArray(new Path[duplicatePaths.size()]);
+    }
+
+    private void addStorageToPath(StorageInfo storage, TreeNode last) {
+        TreeNode current = last;
+        while (current != null){
+            current.addStorage(storage);
+            current = current.parent;
+        }
     }
 
     private TreeNode createPathInTree(Path path){
