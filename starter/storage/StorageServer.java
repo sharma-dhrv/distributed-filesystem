@@ -285,9 +285,9 @@ public class StorageServer implements Storage, Command {
 
 		File parentFile = file.parent().toFile(root);
 
-		if (!parentFile.isDirectory()) {
+		//if (!parentFile.isDirectory()) {
 			parentFile.mkdirs();
-		}
+		//}
 
 		try {
 			return fileToCreate.createNewFile();
@@ -305,15 +305,13 @@ public class StorageServer implements Storage, Command {
 		}
 		
 		Path parentPath = path.parent();
-
+		
 		if (fileToDelete.isDirectory()) {
 			File[] fileList = fileToDelete.listFiles();
 
 			if (fileList != null) {
 				for (File fil : fileList) {
-					if (deleteDir(fil) == false) {
-						return false;
-					}
+					deleteDir(fil);
 				}
 			}
 			
@@ -321,8 +319,9 @@ public class StorageServer implements Storage, Command {
 		
 		boolean deleteSuccess = fileToDelete.delete();
 		while(!parentPath.isRoot() && parentPath.toFile(root).listFiles().length == 0) {
+			Path temp = parentPath.parent();
 			parentPath.toFile(root).delete();
-			parentPath = parentPath.parent();
+			parentPath = temp;
 		}
 		
 		return deleteSuccess;
@@ -333,9 +332,7 @@ public class StorageServer implements Storage, Command {
 
 		if (fileList != null) {
 			for (File f1 : fileList) {
-				if (deleteDir(f1) == false) {
-					return false;
-				}
+				deleteDir(f1);
 			}
 		}
 

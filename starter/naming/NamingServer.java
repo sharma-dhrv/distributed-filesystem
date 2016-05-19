@@ -342,19 +342,40 @@ public class NamingServer implements Service, Registration
         }
         return false;
     }
+    
+    private void removeFromTree(TreeNode node) {
+    	ArrayList<TreeNode> children = new ArrayList<>(node.children.values());
+    	while(!children.isEmpty()) {
+    		TreeNode child = children.get(0);
+    		removeFromTree(child);
+    		children = new ArrayList<>(node.children.values());
+    	}
+    	
+    	node.parent.removeChild(node);
+    }
 
     @Override
     public boolean delete(Path path) throws FileNotFoundException, RMIException {
         if (isValidCreationPath(path)) {
             TreeNode node = tryGetNodeFor(path);
-//            System.out.println(node.storages.size() + " storage servers contain " + path);
-            for (StorageInfo info : node.storages) {
-//            	System.out.println("Deleting " + path + " from " + info.commandStub);
-                info.commandStub.delete(path);
-                
+            boolean result = true;
+            if(node.nodeType == TreeNode.NodeType.DIRECTORY) {
+            	for(StorageInfo info : availableStorages) {
+            		result = result && info.commandStub.delete(path);
+            	}
+            } else {
+	            for (StorageInfo info : node.storages) {
+	                result = info.commandStub.delete(path);
+	                if(result) {
+	                	info.paths.remove(path);
+	                }
+	            }
             }
-            node.parent.removeChild(node);
-//            System.out.println("Delete finish");
+            
+            if(result) {
+        		removeFromTree(node);
+        	}
+            
             return true;
         }
         
@@ -377,15 +398,7 @@ public class NamingServer implements Service, Registration
         
         // TODO: ping the Storage Server before giving it to client. Maybe it's dead and file isn't available
         
-        StorageInfo chosenStorageInfo = node.storages.get(generateRandomInt(node.storages.size()));
-        
-
-    	//boolean isExclusiveLock = node.currentLocks.get(0).isExclusive;
-//    	if(!isExclusiveLock) {
-//    		chosenStorageInfo = node.storages.get(generateRandomInt(node.storages.size()));
-//    	} else {
-    		chosenStorageInfo = node.storages.get(0);
-//    	}        
+        StorageInfo chosenStorageInfo = node.storages.get(0);
         
         return chosenStorageInfo.clientStub;
     }
