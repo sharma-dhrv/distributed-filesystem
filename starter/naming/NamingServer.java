@@ -314,7 +314,8 @@ public class NamingServer implements Service, Registration
         if (result){
             TreeNode newNode = parent.addChild(new TreeNode(parent,file.last(), TreeNode.NodeType.FILE));
             storage.addFile(newNode);
-            addStorageToPath(storage, newNode);
+            newNode.storages.add(storage);
+//            addStorageToPath(storage, newNode);
             return true;
         }
         return false;
@@ -451,7 +452,7 @@ public class NamingServer implements Service, Registration
                     node.addStorage(storage);
                     storage.addFile(node);
                 }
-                addStorageToPath(storage, node);
+//                addStorageToPath(storage, node);
             }
         }
         // TODO: maybe call command_stub.delete(path) for each path in duplicatePaths (to delete physical files synchronously)
