@@ -135,7 +135,7 @@ public abstract class Stub {
 				socket = new Socket();
 				socket.connect(serverSocketAddress);
 			} catch (IOException e) {
-				System.err.println("Failed to connect to server skeleton.");
+				//System.err.println("Failed to connect to server skeleton.");
 				closeConnection(socket);
 				throw (Throwable) (new RMIException(e));
 			}
@@ -145,14 +145,14 @@ public abstract class Stub {
 				out.flush();
 			} catch (IOException e) {
 				closeConnection(socket);
-				System.err.println("Failed to connect to get OutputStream from socket.");
+				//System.err.println("Failed to connect to get OutputStream from socket.");
 				throw (Throwable) (new RMIException(e));
 			}
 			try {
 				in = new ObjectInputStream(socket.getInputStream());
 			} catch (IOException e) {
 				closeConnection(socket);
-				System.err.println("Failed to connect to get InputStream from socket.");
+				//System.err.println("Failed to connect to get InputStream from socket.");
 				throw (Throwable) (new RMIException(e));
 			}
 
@@ -244,8 +244,8 @@ public abstract class Stub {
 		 *
 		 */
 		public String toString() {
-			System.err.println("PORT : " + serverSocketAddress.getPort() + " HOSTNAME : "
-					+ serverSocketAddress.getHostName() + " INTERFACE-NAME : " + c.getName());
+			//System.err.println("PORT : " + serverSocketAddress.getPort() + " HOSTNAME : "
+			//		+ serverSocketAddress.getHostName() + " INTERFACE-NAME : " + c.getName());
 			return "PORT : " + serverSocketAddress.getPort() + " HOSTNAME : " + serverSocketAddress.getHostName()
 					+ " INTERFACE-NAME : " + c.getName();
 		}
