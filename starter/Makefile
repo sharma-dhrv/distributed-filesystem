@@ -11,7 +11,7 @@
 # - JAVAFILES is all of the Java files in the project, including test cases and
 #   build tools.
 
-DFSPACKAGES = common rmi storage naming client apps
+DFSPACKAGES = common rmi rmi/io storage naming client apps
 JARFILE = dfs.jar
 ARCHIVE = project2.zip
 JAVAFILES = */*.java */*/*.java
@@ -40,7 +40,7 @@ include build/Makefile.separator
 # the Windows Java implementation requires the path separator to be ; but
 # Cygwin's bash interprets this as a separator between commands.
 
-UNITCLASSPATH = ".$(CPSEPARATOR)unit"
+UNITCLASSPATH = ".:reference-rmi.jar:.$(CPSEPARATOR)unit"
 
 # Create the single monolithic jar file.
 .PHONY : jar
@@ -51,14 +51,14 @@ jar : all-classes
 # Compile all Java files.
 .PHONY : all-classes
 all-classes :
-	javac $(JAVAFILES)
+	javac -cp .:reference-rmi.jar $(JAVAFILES)
 
 # Run unit and conformance tests.
 .PHONY : test
 test : all-classes
 	java -cp $(UNITCLASSPATH) unit.UnitTests
 	@echo
-	java conformance.ConformanceTests
+	java -cp .:reference-rmi.jar conformance.ConformanceTests
 
 # Delete all intermediate and final output and leave only the source.
 .PHONY : clean

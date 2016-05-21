@@ -76,3 +76,6 @@ starter/.idea/modules.xml
 starter/.idea/starter.iml
 starter/.idea/workspace.xml
 starter/.idea/copyright/profiles_settings.xml
+
+conformance.chkpt
+test.sh
