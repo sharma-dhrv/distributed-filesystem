@@ -11,7 +11,8 @@
 # - JAVAFILES is all of the Java files in the project, including test cases and
 #   build tools.
 
-DFSPACKAGES = common rmi rmi/io storage naming client apps
+DFSPACKAGEPATHS = common rmi rmi/io storage naming client apps
+DFSPACKAGES = common rmi rmi.io storage naming client apps
 JARFILE = dfs.jar
 ARCHIVE = project2.zip
 JAVAFILES = */*.java */*/*.java
@@ -46,7 +47,7 @@ UNITCLASSPATH = ".:reference-rmi.jar:.$(CPSEPARATOR)unit"
 .PHONY : jar
 jar : all-classes
 	jar cfe $(JARFILE) apps.Launcher \
-		$(foreach package,$(DFSPACKAGES),$(package)/*.class)
+		$(foreach package,$(DFSPACKAGEPATHS),$(package)/*.class)
 
 # Compile all Java files.
 .PHONY : all-classes

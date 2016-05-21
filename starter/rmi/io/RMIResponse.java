@@ -25,9 +25,6 @@ public class RMIResponse implements Serializable {
 
 	/**
 	 * The constructor to create an instance of {@code RMIResponse}.
-	 * 
-	 * @param returnValue
-	 *            the return value of the remote method
 	 */
 	public RMIResponse(Object returnValue) {
 		this.returnValue = returnValue;
@@ -36,9 +33,6 @@ public class RMIResponse implements Serializable {
 
 	/**
 	 * The constructor to create an instance of {@code RMIResponse}.
-	 * 
-	 * @param returnValue
-	 *            the exception thrown by remote method
 	 */
 	public RMIResponse(Exception exception) {
 		this.returnValue = null;
