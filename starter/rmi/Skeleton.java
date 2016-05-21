@@ -236,7 +236,7 @@ public class Skeleton<T> {
 					listenerSocket = new ServerSocket(bindAddress.getPort(), maxQueueLength, bindAddress.getAddress());
 				} else {
 					listenerSocket = new ServerSocket(0, maxQueueLength);
-					bindAddress = (InetSocketAddress) listenerSocket.getLocalSocketAddress();
+					bindAddress = new InetSocketAddress(listenerSocket.getInetAddress(), listenerSocket.getLocalPort());
 				}
 				listener = new ListenerThread<T>(this, serverClass, serverObject, listenerSocket);
 				listener.start();

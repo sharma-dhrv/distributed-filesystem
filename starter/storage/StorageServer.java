@@ -86,8 +86,8 @@ public class StorageServer implements Storage, Command {
 
 		this.root = root;
 		Random random = new Random(System.currentTimeMillis());
-		this.clientPort = random.nextInt(65534) + 1;
-		this.commandPort = clientPort + 2;
+		this.clientPort = 0;
+		this.commandPort = 0;
 		this.hostname = null;
 		this.commandSkeleton = null;
 		this.storageSkeleton = null;
@@ -158,15 +158,30 @@ public class StorageServer implements Storage, Command {
 						"Root " + root.getPath() + " for the storage server is not a directory.");
 			}
 
-			InetSocketAddress commandServiceAddress = new InetSocketAddress(hostname, commandPort);
-			Command commandStub = Stub.create(Command.class, commandServiceAddress);
-			commandSkeleton = new Skeleton(Command.class, this, commandServiceAddress);
+			InetSocketAddress commandServiceAddress;
+			if(commandPort != 0) {
+				commandServiceAddress = new InetSocketAddress(hostname, commandPort);
+				commandSkeleton = new Skeleton(Command.class, this, commandServiceAddress);
+			} else {
+				commandSkeleton = new Skeleton(Command.class, this);
+			}
 			commandSkeleton.start();
 
-			InetSocketAddress storageServiceAddress = new InetSocketAddress(hostname, clientPort);
-			Storage storageStub = Stub.create(Storage.class, storageServiceAddress);
-			storageSkeleton = new Skeleton(Storage.class, this, storageServiceAddress);
+			commandServiceAddress = new InetSocketAddress(hostname, commandSkeleton.getBindAddress().getPort());
+			Command commandStub = Stub.create(Command.class, commandServiceAddress);
+
+
+			InetSocketAddress storageServiceAddress;
+			if(clientPort != 0) {
+				storageServiceAddress = new InetSocketAddress(hostname, clientPort);
+				storageSkeleton = new Skeleton(Storage.class, this, storageServiceAddress);
+			} else {
+				storageSkeleton = new Skeleton(Storage.class, this);
+			}
 			storageSkeleton.start();
+			
+			storageServiceAddress = new InetSocketAddress(hostname, storageSkeleton.getBindAddress().getPort());
+			Storage storageStub = Stub.create(Storage.class, storageServiceAddress);
 
 			ArrayList<Path> fileList = parseFiles(root, new Path(Path.pathSeparator), new ArrayList<Path>());
 
